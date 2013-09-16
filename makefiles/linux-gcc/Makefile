@@ -9,7 +9,7 @@ BUILD = build
 OUT = bin
 SOURCES = $(wildcard $(SRC)/*.cpp)
 OBJS = $(addprefix $(BUILD)/, $(notdir $(SOURCES:.cpp=.o)))
-TARGET = $(OUT)/render.exe
+TARGET = $(OUT)/render
 
 all: $(TARGET)
 
