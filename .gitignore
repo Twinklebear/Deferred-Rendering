@@ -25,4 +25,4 @@ bin
 .ycm_extra_conf.py*
 
 # Ignore the in use makefile, only commit the ones in the makefiles/ folder
-./Makefile
+Makefile
