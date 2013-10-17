@@ -9,8 +9,6 @@
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
 
-GLuint makeProgram();
-
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		std::cout << "Failed to init: " << SDL_GetError() << std::endl;
@@ -26,11 +24,15 @@ int main(int argc, char **argv){
 	GLenum err = glewInit();
 	if (err != GLEW_OK){
 		std::cout << "GLEW init error: " << err << std::endl;
-		return 2;
+		return 1;
 	}
 	glEnable(GL_DEPTH_TEST);
 
-	GLuint program = makeProgram();
+	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
+	if (progStatus == -1){
+		return 1;
+	}
+	GLuint program = progStatus;
 	glUseProgram(program);
 	GLint posAttrib = glGetAttribLocation(program, "position");
 	GLint normAttrib = glGetAttribLocation(program, "normal");
@@ -96,67 +98,4 @@ int main(int argc, char **argv){
 
 	return 0;
 }
-//Issue note: shaders/programs not deleted in case of error
-GLuint makeProgram(){
-	GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-	GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-	std::string fShaderCode = util::readFile("res/fshader.glsl");
-	std::string vShaderCode = util::readFile("res/vshader.glsl");
-	const char *fsrc = fShaderCode.c_str();
-	const char *vsrc = vShaderCode.c_str();
 
-	glShaderSource(fShader, 1, &fsrc, 0);
-	glCompileShader(fShader);
-	GLint status = 0;
-	glGetShaderiv(fShader, GL_COMPILE_STATUS, &status);
-	if (status == GL_FALSE){
-		std::cout << "fShader compilation failed" << std::endl;
-		GLint logLen = 0;
-		glGetShaderiv(fShader, GL_INFO_LOG_LENGTH, &logLen);
-		
-		char *log = new char[logLen];
-		glGetShaderInfoLog(fShader, logLen, 0, log);
-		std::cout << "fshader log: " << log << std::endl;
-
-		delete[] log;
-		glDeleteShader(fShader);
-		glDeleteShader(vShader);
-		return -1;
-	}
-
-	glShaderSource(vShader, 1, &vsrc, 0);
-	glCompileShader(vShader);
-	glGetShaderiv(vShader, GL_COMPILE_STATUS, &status);
-	if (status == GL_FALSE){
-		std::cout << "vShader compilation failed" << std::endl;
-		GLint logLen = 0;
-		glGetShaderiv(vShader, GL_INFO_LOG_LENGTH, &logLen);
-		
-		char *log = new char[logLen];
-		glGetShaderInfoLog(vShader, logLen, 0, log);
-		std::cout << "vshader log: " << log << std::endl;
-
-		delete[] log;
-		glDeleteShader(fShader);
-		glDeleteShader(vShader);
-		return -1;
-	}
-
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vShader);
-	glAttachShader(program, fShader);
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	if (status == GL_FALSE){
-		std::cout << "Linking failed" << std::endl;
-		glDeleteShader(fShader);
-		glDeleteShader(vShader);
-		glDeleteProgram(program);
-		return -1;
-	}
-	glDetachShader(program, fShader);
-	glDetachShader(program, vShader);
-	glDeleteShader(fShader);
-	glDeleteShader(vShader);
-	return program;
-}

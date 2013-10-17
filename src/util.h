@@ -13,6 +13,16 @@ namespace util {
 	*/
 	std::string readFile(const std::string &fName);
 	/*
+	 * Load a GLSL shader from some file, returns -1 if loading failed
+	 */
+	GLint loadShader(const std::string &file, GLenum type);
+	/*
+	 * Load a simple shader program using the vertex and fragment
+	 * shaders in the files passed
+	 * returns -1 if loading failed
+	 */
+	GLint loadProgram(const std::string &vertfname, const std::string &fragfname);
+	/*
 	* Load an OBJ model file into the vbo and ebo passed in
 	* The model must have vertex, texture and normal data and be a triangle mesh
 	* vbo & ebo should be already created and will be filled with the model data
