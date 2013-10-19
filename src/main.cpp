@@ -14,19 +14,33 @@ int main(int argc, char **argv){
 		std::cout << "Failed to init: " << SDL_GetError() << std::endl;
 		return 1;
 	}
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	
 	SDL_Window *win = SDL_CreateWindow("Deferred Renderer",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT,
 		SDL_WINDOW_OPENGL);
 
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	//It seems these flags throw an invalid enum error on Mesa
+	//but everything works ok besides that
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	
 	SDL_GLContext context = SDL_GL_CreateContext(win);
 
+	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
 	if (err != GLEW_OK){
 		std::cout << "GLEW init error: " << err << std::endl;
 		return 1;
 	}
+	util::logGLError("Post SDL/GLEW init");
+
 	glEnable(GL_DEPTH_TEST);
+
+	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
+		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
+		<< "OpenGL Renderer: " << glGetString(GL_RENDERER) << "\n"
+		<< "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
 
 	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
 	if (progStatus == -1){
@@ -34,8 +48,6 @@ int main(int argc, char **argv){
 	}
 	GLuint program = progStatus;
 	glUseProgram(program);
-	GLint posAttrib = glGetAttribLocation(program, "position");
-	GLint normAttrib = glGetAttribLocation(program, "normal");
 	GLint modelLoc = glGetUniformLocation(program, "model");
 	GLint projLoc = glGetUniformLocation(program, "proj");
 
@@ -58,20 +70,24 @@ int main(int argc, char **argv){
 	//you're running the program
 	if (!util::loadOBJ("res/polyhedron.obj", obj[0], obj[1], nElems)){
 		std::cout << "obj loading failed" << std::endl;
+		return 1;
 	}
-	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(normAttrib);
-	glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
+	//Position is 0, normals is 1, uv is 2
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), 0);
+
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
 		(void*)(3 * sizeof(GL_FLOAT)));
 	
-	err = glGetError();
-	if (err != GL_NO_ERROR){
-		std::cout << "gl error: " << std::hex 
-			<< err << std::dec << std::endl;
-		return err;
-	}
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
+		(void*)(6 * sizeof(GL_FLOAT)));
 
+	if (util::logGLError("Pre-loop error check")){
+		return 1;
+	}
+	
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
