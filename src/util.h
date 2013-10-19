@@ -23,6 +23,11 @@ namespace util {
 	 */
 	GLint loadProgram(const std::string &vertfname, const std::string &fragfname);
 	/*
+	 * Check for an OpenGL error and log it along with the message passed
+	 * if an error occured. Will return true if an error occured & was logged
+	 */
+	bool logGLError(const std::string &msg);
+	/*
 	* Load an OBJ model file into the vbo and ebo passed in
 	* The model must have vertex, texture and normal data and be a triangle mesh
 	* vbo & ebo should be already created and will be filled with the model data

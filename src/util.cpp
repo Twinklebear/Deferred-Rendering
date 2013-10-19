@@ -83,6 +83,15 @@ GLint util::loadProgram(const std::string &vertfname, const std::string &fragfna
 	}
 	return program;
 }
+bool util::logGLError(const std::string &msg){
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR){
+		std::cerr << "OpenGL Error: " << gluErrorString(err)
+			<< " - " << msg << "\n";
+		return true;
+	}
+	return false;
+}
 bool util::loadOBJ(const std::string &fName, GLuint &vbo, GLuint &ebo, size_t &nElems){
 	std::ifstream file(fName);
 	if (!file.is_open()){
