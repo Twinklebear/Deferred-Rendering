@@ -1,8 +1,5 @@
 # Blender v2.63 (sub 0) OBJ File: ''
 # www.blender.org
-# why does the cube take significantly longer to load than 
-# suzanne, even though suzanne is a far more complex model?
-# mtllib cube.mtl
 v 1.000000 -1.000000 -1.000000
 v 1.000000 -1.000000 1.000000
 v -1.000000 -1.000000 1.000000
