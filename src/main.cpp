@@ -20,8 +20,6 @@ int main(int argc, char **argv){
 		SDL_WINDOW_OPENGL);
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	//It seems these flags throw an invalid enum error on Mesa
-	//but everything works ok besides that
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	
