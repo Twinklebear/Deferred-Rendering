@@ -27,13 +27,17 @@ int main(int argc, char **argv){
 	
 	SDL_GLContext context = SDL_GL_CreateContext(win);
 
+	util::logGLError("Post SDL init");
+
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
 	if (err != GLEW_OK){
 		std::cout << "GLEW init error: " << err << std::endl;
 		return 1;
 	}
-	util::logGLError("Post SDL/GLEW init");
+	//Note: If we see an invalid enumerant error that's a result of glewExperimental
+	//and it sounds like it can be safely ignored
+	util::logGLError("Post GLEW init");
 
 	glClearColor(0.5f, 0.5f, 0.5f, 1);
 	glEnable(GL_DEPTH_TEST);
