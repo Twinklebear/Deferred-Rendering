@@ -8,7 +8,7 @@ GLEW_LIB = -L $(GLEW)/lib -lglew32
 GLM = C:/glm-0.9.4.1
 GLM_LIB = -L $(GLM)/bin
 CXXFLAGS = -std=c++11 -c -Wall -Wextra -pedantic -g -I $(GLM) $(GLEW_INCLUDE)  $(SDL_INCLUDE)
-LDFLAGS = -lmingw32 -mwindows -mconsole -lOpenGL32 $(GLEW_LIB) $(GLM_LIB) $(SDL_LIB)
+LDFLAGS = -lmingw32 -mwindows -mconsole -lglu32 -lOpenGL32 $(GLEW_LIB) $(GLM_LIB) $(SDL_LIB)
 # Generate listing of all our source files and object  files
 SRC = src
 BUILD = build
