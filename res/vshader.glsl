@@ -14,6 +14,6 @@ out vec2 f_uv;
 void main(){
 	gl_Position = proj * model * vec4(position, 1.f);
 	f_color = abs(normal);
-	f_normal = normal;
+	f_normal = (model * vec4(normal, 1.f)).xyz;
 	f_uv = uv;
 }
