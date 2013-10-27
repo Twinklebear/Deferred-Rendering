@@ -11,5 +11,6 @@ void main(){
 	diffuse = vec4(f_color, 1.f);
 	//Scale the normal values from [-1,1] range to [0,1] range
 	normal = ((f_normal - vec4(-1.f, -1.f, -1.f, 0.f) / 2.f));
+	normal.w = 1.f;
 }
 
