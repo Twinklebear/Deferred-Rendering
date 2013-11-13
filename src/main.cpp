@@ -199,7 +199,7 @@ int main(int argc, char **argv){
 		frameTime = 0.9 * (end - start) / 1000.f + 0.1 * frameTime;
 		start = end;
 		if (printFps){
-			std::cout << "fps: " << static_cast<int>(1 / frameTime) << "\n";
+			std::cout << "frame time: " << frameTime << "ms\n";
 		}
 	}
 	glDeleteFramebuffers(1, &fbo);
