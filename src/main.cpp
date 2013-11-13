@@ -159,12 +159,20 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	
+	//For tracking fps
+	float frameTime = 0.0;
+	bool printFps = false;
+	int start = SDL_GetTicks();
+
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
 		while (SDL_PollEvent(&e)){
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
 				quit = true;
+			}
+			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_f){
+				printFps = !printFps;
 			}
 		}
 		//First pass
@@ -186,9 +194,13 @@ int main(int argc, char **argv){
 		util::logGLError("post second pass");
 
 		SDL_GL_SwapWindow(win);
-		//We're not doing anything interactive, just testing some rendering
-		//so don't use so much cpu
-		SDL_Delay(15);
+		int end = SDL_GetTicks();
+		//Keep a smoothed average of the time per frame
+		frameTime = 0.9 * (end - start) / 1000.f + 0.1 * frameTime;
+		start = end;
+		if (printFps){
+			std::cout << "fps: " << static_cast<int>(1 / frameTime) << "\n";
+		}
 	}
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(3, texBuffers);
