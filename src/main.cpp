@@ -15,12 +15,16 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#ifdef DEBUG
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+#endif
+
 	SDL_Window *win = SDL_CreateWindow("Deferred Renderer",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT,
 		SDL_WINDOW_OPENGL);
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	
 	SDL_GLContext context = SDL_GL_CreateContext(win);
 
@@ -36,13 +40,20 @@ int main(int argc, char **argv){
 	//and it sounds like it can be safely ignored
 	util::logGLError("Post GLEW init");
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1);
+	glClearColor(0, 0, 0, 1);
 	glEnable(GL_DEPTH_TEST);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
 		<< "OpenGL Renderer: " << glGetString(GL_RENDERER) << "\n"
 		<< "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
+
+#ifdef DEBUG
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+	glDebugMessageCallbackARB((GLDEBUGPROCARB)util::glDebugCallback, NULL);
+	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
+		0, NULL, GL_TRUE);
+#endif
 
 	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
 	if (progStatus == -1){
@@ -57,7 +68,7 @@ int main(int argc, char **argv){
 	glm::mat4 model = glm::translate<GLfloat>(0.f, 0.f, -2.f);
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	
-	glm::mat4 projection = glm::perspective(75.f, 
+	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 0.1f, 100.f);
 	projection = projection * glm::lookAt(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));

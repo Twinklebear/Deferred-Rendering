@@ -16,6 +16,10 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 	endif()
 endif()
 
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	add_definitions(-DDEBUG)
+endif()
+
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)

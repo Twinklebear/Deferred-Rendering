@@ -15,7 +15,7 @@ std::string util::readFile(const std::string &fName){
 		return "";
 	}
 	return std::string((std::istreambuf_iterator<char>(file)),
-    	std::istreambuf_iterator<char>());
+		std::istreambuf_iterator<char>());
 }
 GLint util::loadShader(const std::string &file, GLenum type){
 	GLuint shader = glCreateShader(type);
@@ -92,6 +92,12 @@ bool util::logGLError(const std::string &msg){
 	}
 	return false;
 }
+void util::glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
+	GLsizei len, const GLchar *msg, GLvoid *user)
+{
+	//TODO: More logging
+	std::cout << "Recieved error msg: " << msg << "\n";
+}
 bool util::loadOBJ(const std::string &fName, GLuint &vbo, GLuint &ebo, size_t &nElems){
 	std::ifstream file(fName);
 	if (!file.is_open()){
@@ -143,7 +149,7 @@ bool util::loadOBJ(const std::string &fName, GLuint &vbo, GLuint &ebo, size_t &n
 					vertexData.push_back(tmpPos[vertex[0] - 1]);
 					vertexData.push_back(tmpNorm[vertex[2] - 1]);
 					vertexData.push_back(glm::vec3(tmpUv[vertex[1] - 1], 0));
-					//Store the new index, also subract 1 b/c size 1 => idx 0 
+					//Store the new index, also subract 1 b/c size 1 => idx 0
 					//and divide by 3 b/c there are 3 components per vertex
 					indices.push_back((vertexData.size() - 1) / 3);
 					vertexIndices[v] = indices.back();
