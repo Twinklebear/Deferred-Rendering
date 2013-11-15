@@ -15,7 +15,7 @@ float linearize(float depth){
 	return 2.f * zNear / (zFar + zNear - depth * (zFar - zNear));
 }
 
-void main(){
+void main(void){
 	color = texture(diffuse, f_uv);
 	//color = texture(normal, f_uv);
 	float d = linearize(texture(depth, f_uv).x);

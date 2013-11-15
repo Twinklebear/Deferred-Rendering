@@ -142,10 +142,11 @@ int main(int argc, char **argv){
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 		texBuffers[2], 0);
 
-	util::logGLError("made & attached render targets");
-
 	GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 	glDrawBuffers(2, drawBuffers);
+
+	util::logGLError("made & attached render targets");
+	std::cout << "made and attached render targets\n";
 
 	//Need another shader program for the second pass, then load up the quad
 	//apply no transforms and set it to use texture units 0 (diffuse) & 1 (normals)
@@ -179,7 +180,7 @@ int main(int argc, char **argv){
 	glUniform1i(diffuseUnif, 0);
 	glUniform1i(normalUnif, 1);
 	glUniform1i(depthUnif, 2);
-
+	
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
 	}
