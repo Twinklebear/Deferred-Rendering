@@ -6,6 +6,12 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
+#ifdef __linux__
+#include <SDL2/SDL_opengl.h>
+#elif defined(_WIN32)
+#include <SDL_opengl.h>
+#endif
+
 namespace util {
 	/*
 	* Read the entire contents of a file into a string, if an error occurs
@@ -30,7 +36,7 @@ namespace util {
 	/*
 	 * A debug callback for the GL_ARB_debug_out extension
 	 */
-	void glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
+	void APIENTRY glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
 		GLsizei len, const GLchar *msg, GLvoid *user);
 	/*
 	* Load an OBJ model file into the vbo and ebo passed in

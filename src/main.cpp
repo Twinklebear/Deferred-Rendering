@@ -1,9 +1,15 @@
 #include <iostream>
 #include <string>
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/glm.hpp>
+
+#ifdef __linux__
+#include <SDL2/SDL.h>
+#elif defined(_WIN32)
+#include <SDL.h>
+#endif
+
 #include "util.h"
 
 const int WIN_WIDTH = 640;
@@ -50,7 +56,7 @@ int main(int argc, char **argv){
 
 #ifdef DEBUG
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-	glDebugMessageCallbackARB((GLDEBUGPROCARB)util::glDebugCallback, NULL);
+	glDebugMessageCallbackARB(util::glDebugCallback, NULL);
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
