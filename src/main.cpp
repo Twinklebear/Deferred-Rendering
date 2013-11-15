@@ -146,7 +146,6 @@ int main(int argc, char **argv){
 	glDrawBuffers(2, drawBuffers);
 
 	util::logGLError("made & attached render targets");
-	std::cout << "made and attached render targets\n";
 
 	//Need another shader program for the second pass, then load up the quad
 	//apply no transforms and set it to use texture units 0 (diffuse) & 1 (normals)
