@@ -8,17 +8,11 @@ find_path(GLM_INCLUDE_DIR glm/glm.hpp
 	HINTS $ENV{GLM}
 	PATH_SUFFIXES glm
 )
-find_library(GLM_LIBRARY
-	HINTS $ENV{GLM}
-	NAMES glm
-	PATH_SUFFIXES lib bin
-)
 
 set(GLM_INCLUDE_DIRS ${GLM_INCLUDE_DIR})
-set(GLM_LIBRARIES ${GLM_LIBRARY})
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GLM REQUIRED_VARS GLM_INCLUDE_DIR GLM_LIBRARY)
+find_package_handle_standard_args(GLM REQUIRED_VARS GLM_INCLUDE_DIR)
 
-mark_as_advanced(GLM_INCLUDE_DIR GLM_LIBRARY)
+mark_as_advanced(GLM_INCLUDE_DIR)
 
