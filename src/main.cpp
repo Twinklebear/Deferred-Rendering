@@ -3,7 +3,6 @@
 #include <GL/glew.h>
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
-#include <SOIL.h>
 
 #ifdef __linux__
 #include <SDL2/SDL.h>
