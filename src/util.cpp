@@ -91,6 +91,47 @@ GLint util::loadProgram(const std::string &vertfname, const std::string &fragfna
 	}
 	return program;
 }
+GLuint util::loadTexture(const std::string &file){
+	SDL_Surface *surf = SDL_LoadBMP(file.c_str());
+	//TODO: Throw an error?
+	if (!surf){
+		std::cout << "Failed to load bmp: " << file
+			<< " SDL_error: " << SDL_GetError() << "\n";
+		return 0;
+	}
+	//Assume 4 or 3 bytes per pixel
+	GLenum format, internal;
+	if (surf->format->BytesPerPixel == 4){
+		internal = GL_RGBA;
+		if (surf->format->Rmask == 0x000000ff){
+			format = GL_RGBA;
+		}
+		else {
+			format = GL_BGRA;
+		}		
+	}
+	else {
+		internal = GL_RGB;
+		if (surf->format->Rmask == 0x000000ff){
+			format = GL_RGB;
+		}
+		else {
+			format = GL_BGR;
+		}
+	}
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, internal, surf->w, surf->h, 0, format,
+		GL_UNSIGNED_BYTE, surf->pixels);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	SDL_FreeSurface(surf);
+	return tex;
+}
 bool util::logGLError(const std::string &msg){
 	GLenum err = glGetError();
 	if (err != GL_NO_ERROR){

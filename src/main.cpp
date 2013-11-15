@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
+#include <SOIL.h>
 
 #ifdef __linux__
 #include <SDL2/SDL.h>
@@ -30,7 +31,6 @@ int main(int argc, char **argv){
 	SDL_Window *win = SDL_CreateWindow("Deferred Renderer",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT,
 		SDL_WINDOW_OPENGL);
-
 	
 	SDL_GLContext context = SDL_GL_CreateContext(win);
 
@@ -71,6 +71,13 @@ int main(int argc, char **argv){
 	GLint modelLoc = glGetUniformLocation(program, "model");
 	GLint projLoc = glGetUniformLocation(program, "proj");
 
+	//Load a texture for the polyhedron
+	GLuint modelTexture = util::loadTexture("res/texture.bmp");
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, modelTexture);
+	GLuint modelTexUnif = glGetUniformLocation(program, "tex_diffuse");
+	glUniform1i(modelTexUnif, 3);
+
 	glm::mat4 model = glm::translate<GLfloat>(0.f, 0.f, -2.f);
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	
@@ -79,7 +86,7 @@ int main(int argc, char **argv){
 	projection = projection * glm::lookAt(glm::vec3(0.f, 0.f, -5.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-	
+
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);

@@ -17,7 +17,7 @@ float linearize(float depth){
 
 void main(){
 	color = texture(diffuse, f_uv);
-	color = texture(normal, f_uv);
+	//color = texture(normal, f_uv);
 	float d = linearize(texture(depth, f_uv).x);
 	//color = vec4(d, d, d, 1.f);
 }

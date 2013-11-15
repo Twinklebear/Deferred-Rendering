@@ -29,6 +29,14 @@ namespace util {
 	 */
 	GLint loadProgram(const std::string &vertfname, const std::string &fragfname);
 	/*
+	 * Load an image into an OpenGL texture. SDL is used to read the image into
+	 * a surface which is then passed to OpenGL. A new texture id is created
+	 * and returned if successful
+	 * Note: To lazy to setup a FindSDL2_Image for my windows machine so
+	 * just BMP support for now
+	 */
+	GLuint loadTexture(const std::string &file);
+	/*
 	 * Check for an OpenGL error and log it along with the message passed
 	 * if an error occured. Will return true if an error occured & was logged
 	 */

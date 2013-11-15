@@ -7,13 +7,11 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 uv;
 
-out vec3 f_color;
 out vec4 f_normal;
 out vec2 f_uv;
 
 void main(){
 	gl_Position = proj * model * vec4(position, 1.f);
-	f_color = abs(normal);
 	f_normal = normalize(model * vec4(normal, 0.f));
 	f_uv = uv;
 }
