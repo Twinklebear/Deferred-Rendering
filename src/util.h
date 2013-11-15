@@ -44,8 +44,13 @@ namespace util {
 	/*
 	 * A debug callback for the GL_ARB_debug_out extension
 	 */
+#ifdef WIN32
 	void APIENTRY glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
 		GLsizei len, const GLchar *msg, GLvoid *user);
+#else
+	void glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
+		GLsizei len, const GLchar *msg, GLvoid *user);
+#endif
 	/*
 	* Load an OBJ model file into the vbo and ebo passed in
 	* The model must have vertex, texture and normal data and be a triangle mesh
