@@ -44,7 +44,7 @@ namespace util {
 	/*
 	 * A debug callback for the GL_ARB_debug_out extension
 	 */
-#ifdef WIN32
+#ifdef _WIN32
 	void APIENTRY glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
 		GLsizei len, const GLchar *msg, GLvoid *user);
 #else
