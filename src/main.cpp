@@ -68,7 +68,8 @@ int main(int argc, char **argv){
 	GLuint program = progStatus;
 	glUseProgram(program);
 
-	GLint viewProjLoc = glGetUniformLocation(program, "view_proj");
+	GLint projUnif = glGetUniformLocation(program, "proj");
+	GLint viewUnif = glGetUniformLocation(program, "view");
 
 	//Load a texture for the polyhedron
 	GLuint modelTexture = util::loadTexture("res/texture.bmp");
@@ -79,9 +80,10 @@ int main(int argc, char **argv){
 
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 0.1f, 100.f);
-	glm::mat4 viewProj = projection * glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
+	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
-	glUniformMatrix4fv(viewProjLoc, 1, GL_FALSE, glm::value_ptr(viewProj));
+	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
 	Model polyhedron("res/polyhedron.obj", program);
 	polyhedron.translate(glm::vec3(0.f, 0.f, 2.f));

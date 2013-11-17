@@ -28,6 +28,6 @@ vec4 compute_view_pos(void){
 
 
 void main(void){
-	color = compute_view_pos();
+	color = texture(diffuse, f_uv);
 }
 
