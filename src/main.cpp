@@ -179,6 +179,12 @@ int main(int argc, char **argv){
 	glUniform1i(diffuseUnif, 0);
 	glUniform1i(normalUnif, 1);
 	glUniform1i(depthUnif, 2);
+
+	GLuint invProjUnif = glGetUniformLocation(quadProg, "inv_proj");
+	GLuint depthRangeUnif = glGetUniformLocation(quadProg, "depth_range");
+	glm::mat4 invProjection = glm::inverse(projection);
+	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProjection));
+	glUniform2f(depthRangeUnif, 0.1f, 100.f);
 	
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
