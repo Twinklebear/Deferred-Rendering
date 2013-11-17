@@ -19,7 +19,7 @@ float linearize(float d){
  * the second pass draws the quad over the entire screen so the
  * uv coords map to our NDC coords
  */
-vec4 compute_view_pos(){
+vec4 compute_view_pos(void){
 	float z = linearize(texture(depth, f_uv).x);
 	vec4 pos = vec4(f_uv * 2.f - 1.f, z, 1.f);
 	pos = inv_proj * pos;
