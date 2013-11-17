@@ -125,26 +125,7 @@ int main(int argc, char **argv){
 
 	util::logGLError("made & attached render targets");
 
-	//Need another shader program for the second pass, then load up the quad
-	//apply no transforms and set it to use texture units 0 (diffuse) & 1 (normals)
-	//and later 3 (depth)
-	//Quad VAO, VBO, EBO
-	GLuint quad[3];
-	glGenVertexArrays(1, quad);
-	glGenBuffers(2, quad + 1);
-	size_t quadElems = 0;
-	glBindVertexArray(quad[0]);
-	if (!util::loadOBJ("res/quad.obj", quad[1], quad[2], quadElems)){
-		std::cout << "Failed to load quad\n";
-		return 1;
-	}
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), 0);
-
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
-		(void*)(6 * sizeof(GL_FLOAT)));
-
+	//Need another shader program for the second pass
 	progStatus = util::loadProgram("res/vsecondpass.glsl", "res/fsecondpass.glsl");
 	if (progStatus == -1){
 		return 1;
@@ -161,6 +142,9 @@ int main(int argc, char **argv){
 	GLuint invProjUnif = glGetUniformLocation(quadProg, "inv_proj");
 	glm::mat4 invProj = glm::inverse(projection);
 	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProj));
+
+	//We render the second pass onto a quad drawn to the NDC
+	Model quad("res/quad.obj", quadProg);
 	
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
@@ -193,9 +177,8 @@ int main(int argc, char **argv){
 		//Second pass
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glBindVertexArray(quad[0]);
-		glUseProgram(quadProg);
-		glDrawElements(GL_TRIANGLES, quadElems, GL_UNSIGNED_SHORT, 0);
+		quad.bind();
+		glDrawElements(GL_TRIANGLES, quad.elems(), GL_UNSIGNED_SHORT, 0);
 
 		util::logGLError("post second pass");
 
@@ -210,11 +193,6 @@ int main(int argc, char **argv){
 	}
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(3, texBuffers);
-
-	glDeleteBuffers(2, quad + 1);
-	glDeleteVertexArrays(1, quad);
-	
-	glDeleteProgram(quadProg);
 	
 	SDL_GL_DeleteContext(context);
 	SDL_DestroyWindow(win);
