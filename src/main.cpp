@@ -10,6 +10,7 @@
 #include <SDL.h>
 #endif
 
+#include "model.h"
 #include "util.h"
 
 const int WIN_WIDTH = 640;
@@ -86,30 +87,7 @@ int main(int argc, char **argv){
 		glm::vec3(0.f, 1.f, 0.f));
 	glUniformMatrix4fv(viewProjLoc, 1, GL_FALSE, glm::value_ptr(viewProj));
 
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	GLuint obj[2];
-	glGenBuffers(2, obj);
-	size_t nElems = 0;
-	//Note: Resource paths are relative to the top level directory as that's where it's expected
-	//you're running the program
-	if (!util::loadOBJ("res/polyhedron.obj", obj[0], obj[1], nElems)){
-		std::cout << "obj loading failed" << std::endl;
-		return 1;
-	}
-	//Position is 0, normals is 1, uv is 2
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), 0);
-
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
-		(void*)(3 * sizeof(GL_FLOAT)));
-	
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
-		(void*)(6 * sizeof(GL_FLOAT)));
+	Model polyhedron("res/polyhedron.obj", program);
 
 	//Setup our render targets
 	GLuint fbo;
@@ -205,11 +183,10 @@ int main(int argc, char **argv){
 			}
 		}
 		//First pass
-		glUseProgram(program);
-		glBindVertexArray(vao);
+		polyhedron.bind();
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawElements(GL_TRIANGLES, nElems, GL_UNSIGNED_SHORT, 0);
+		glDrawElements(GL_TRIANGLES, polyhedron.elems(), GL_UNSIGNED_SHORT, 0);
 
 		util::logGLError("post first pass");
 
@@ -234,12 +211,9 @@ int main(int argc, char **argv){
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(3, texBuffers);
 
-	glDeleteBuffers(2, obj);
-	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(2, quad + 1);
 	glDeleteVertexArrays(1, quad);
 	
-	glDeleteProgram(program);
 	glDeleteProgram(quadProg);
 	
 	SDL_GL_DeleteContext(context);
