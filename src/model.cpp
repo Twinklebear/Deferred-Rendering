@@ -1,11 +1,13 @@
 #include <iostream>
 #include <string>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
 #include "util.h"
 #include "model.h"
 
 Model::Model(const std::string &file, GLuint program)
-	: vao(0), nElems(0), program(program)
+	: vao(0), nElems(0), program(program), matUnif(-1)
 {
 	load(file);
 }
@@ -20,6 +22,24 @@ void Model::bind(){
 }
 size_t Model::elems(){
 	return nElems;
+}
+void Model::translate(const glm::vec3 &vec){
+	if (matUnif != -1){
+		translation = glm::translate<GLfloat>(vec) * translation;
+		updateMatrix();
+	}
+}
+void Model::rotate(const glm::mat4 &rot){
+	if (matUnif != -1){
+		rotation = rot * rotation;
+		updateMatrix();
+	}
+}
+void Model::scale(const glm::vec3 &scale){
+	if (matUnif != -1){
+		scaling = glm::scale<GLfloat>(scale) * scaling;
+		updateMatrix();
+	}
 }
 void Model::load(const std::string &file){
 	glGenVertexArrays(1, &vao);
@@ -40,5 +60,19 @@ void Model::load(const std::string &file){
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT),
 		(void*)(6 * sizeof(GL_FLOAT)));
+	//Send the identity for the initial model matrix, if that uniform is available
+	glUseProgram(program);
+	matUnif = glGetUniformLocation(program, "model");
+	if (matUnif != -1){
+		translation = glm::translate<GLfloat>(0.f, 0.f, 0.f);
+		rotation = glm::rotate<GLfloat>(0.f, 0.f, 1.f, 0.f);
+		scaling = glm::scale<GLfloat>(1.f, 1.f, 1.f);
+		updateMatrix();
+	}
+}
+void Model::updateMatrix(){
+	glUseProgram(program);
+	glm::mat4 model = translation * rotation * scaling;
+	glUniformMatrix4fv(matUnif, 1, GL_FALSE, glm::value_ptr(model));
 }
 

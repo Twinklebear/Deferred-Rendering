@@ -3,6 +3,7 @@
 
 #include <string>
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 
 /*
  * A simple very light abstraction of a 3d model, will
@@ -17,10 +18,17 @@ class Model {
 	GLuint buf[2];
 	size_t nElems;
 	GLuint program;
+	//We keep the matrices separate and compose only when sending to GPU
+	//to not screw up order of operation
+	GLint matUnif;
+	glm::mat4 translation, rotation, scaling;
 
 public:
 	/*
 	 * Load the model from a file and give it a shader program to use
+	 * The shader program should take position, normal and uv as inputs 0, 1, 2
+	 * and have a uniform mat4 input for the model matrix if not doing instanced
+	 * rendering
 	 */
 	Model(const std::string &file, GLuint program);
 	/*
@@ -35,12 +43,28 @@ public:
 	 * Get the number of elements in the element buffer
 	 */
 	size_t elems();
+	/*
+	 * Apply some translation to the model
+	 */
+	void translate(const glm::vec3 &vec);
+	/*
+	 * Apply a rotation matrix to the model
+	 */
+	void rotate(const glm::mat4 &rot);
+	/*
+	 * Apply some scaling to the model
+	 */
+	void scale(const glm::vec3 &scale);
 
 private:
 	/*
 	 * Load the model from the file and setup the VAO
 	 */
 	void load(const std::string &file);
+	/*
+	 * Update the uniform model matrix being sent to the shader
+	 */
+	void updateMatrix();
 };
 
 #endif
