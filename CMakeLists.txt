@@ -31,6 +31,7 @@ if (WIN32)
 	include_directories(${GLM_INCLUDE_DIRS})
 endif()
 
+include_directories(include)
 include_directories(${SDL2_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR} ${GLEW_INCLUDE_DIR})
 
 add_subdirectory(src)
