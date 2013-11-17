@@ -159,8 +159,38 @@ int main(int argc, char **argv){
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
 				quit = true;
 			}
-			if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_f){
-				printFps = !printFps;
+			if (e.type == SDL_KEYDOWN){
+				switch (e.key.keysym.sym){
+					case SDLK_f:
+						printFps = !printFps;
+						break;
+					case SDLK_a:
+						polyhedron.translate(frameTime * glm::vec3(-2.f, 0.f, 0.f));
+						break;
+					case SDLK_d:
+						polyhedron.translate(frameTime * glm::vec3(2.f, 0.f, 0.f));
+						break;
+					case SDLK_w:
+						polyhedron.translate(frameTime * glm::vec3(0.f, 2.f, 0.f));
+						break;
+					case SDLK_s:
+						polyhedron.translate(frameTime * glm::vec3(0.f, -2.f, 0.f));
+						break;
+					case SDLK_z:
+						polyhedron.translate(frameTime * glm::vec3(0.f, 0.f, -2.f));
+						break;
+					case SDLK_x:
+						polyhedron.translate(frameTime * glm::vec3(0.f, 0.f, 2.f));
+						break;
+					case SDLK_q:
+						polyhedron.rotate(glm::rotate<GLfloat>(frameTime * -45.f, 0.f, 1.f, 0.f));
+						break;
+					case SDLK_e:
+						polyhedron.rotate(glm::rotate<GLfloat>(frameTime * 45.f, 0.f, 1.f, 0.f));
+						break;
+					default:
+						break;
+				}
 			}
 		}
 		//First pass
