@@ -4,22 +4,30 @@ uniform sampler2D diffuse;
 uniform sampler2D normal;
 uniform sampler2D depth;
 uniform mat4 inv_proj;
-uniform vec2 depth_range;
 
 in vec2 f_uv;
-in vec2 ndc_pos;
 
 out vec4 color;
 
-//Linearize the depth value, assumes near is 0.1 and far is 100
-float linearize(float depth){
-	return 2.f * depth_range.x
-		/ (depth_range.y + depth_range.x - depth * (depth_range.y - depth_range.x));
+//Linearize the depth value passed in
+float linearize(float d){
+	return (2.f * d - gl_DepthRange.near - gl_DepthRange.far)
+		/ (gl_DepthRange.far - gl_DepthRange.near);
+}
+/*
+ * Reconstruct the view-space position, this relies on the fact that
+ * the second pass draws the quad over the entire screen so the
+ * uv coords map to our NDC coords
+ */
+vec4 compute_view_pos(){
+	float z = linearize(texture(depth, f_uv).x);
+	vec4 pos = vec4(f_uv * 2.f - 1.f, z, 1.f);
+	pos = inv_proj * pos;
+	return pos / pos.w;
 }
 
+
 void main(void){
-	float d = linearize(texture(depth, f_uv).x);
-	vec4 view_pos = inv_proj * vec4(ndc_pos, d, 1.f);
-	color = view_pos;
+	color = compute_view_pos();
 }
 

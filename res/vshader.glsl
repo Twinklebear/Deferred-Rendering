@@ -1,7 +1,7 @@
 #version 330
 
 uniform mat4 model;
-uniform mat4 proj;
+uniform mat4 view_proj;
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
@@ -11,7 +11,7 @@ out vec4 f_normal;
 out vec2 f_uv;
 
 void main(void){
-	gl_Position = proj * model * vec4(position, 1.f);
+	gl_Position = view_proj * model * vec4(position, 1.f);
 	f_normal = normalize(model * vec4(normal, 0.f));
 	f_uv = uv;
 }
