@@ -32,6 +32,7 @@ void main(void){
 	vec4 n = texture(normal, f_uv);
 	n = n * 2.f - 1.f;
 	n.w = 0.f;
+	n = normalize(n);
 	float diff = max(0.f, dot(n, light_dir));
 	float spec = max(0.f, dot(n, half_vect));
 	if (diff == 0.f){
