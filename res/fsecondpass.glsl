@@ -4,6 +4,8 @@ uniform sampler2D diffuse;
 uniform sampler2D normal;
 uniform sampler2D depth;
 uniform mat4 inv_proj;
+uniform vec4 light_dir;
+uniform vec4 half_vect;
 
 in vec2 f_uv;
 
@@ -26,8 +28,22 @@ vec4 compute_view_pos(void){
 	return pos / pos.w;
 }
 
-
 void main(void){
+	vec4 n = texture(normal, f_uv);
+	float diff = max(0.f, dot(n, light_dir));
+	float spec = max(0.f, dot(n, half_vect));
+	if (diff == 0.f){
+		spec = 0.f;
+	}
+	else {
+		//Just give everyone 50 shininess
+		spec = pow(spec, 50.f);
+	}
+	//Apply some ambient as well and set light color to white
+	//with a rather low strength
+	vec3 scattered = vec3(0.2f, 0.2f, 0.2f) + 1.f * diff;
+	vec3 reflected = vec3(1.f * spec * 0.4f);
 	color = texture(diffuse, f_uv);
+	color.xyz = min(color.xyz * scattered + reflected, vec3(1.f));
 }
 
