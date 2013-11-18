@@ -10,6 +10,7 @@ layout(location = 1) out vec4 normal;
 
 void main(void){
 	diffuse = texture(tex_diffuse, f_uv);
-	normal = f_normal;
+	normal = (f_normal + 1.f) / 2.f;
+	normal.w = 0.f;
 }
 
