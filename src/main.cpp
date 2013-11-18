@@ -88,11 +88,6 @@ int main(int argc, char **argv){
 	//The light direction and half vector
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
 	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
-	//Pass them to the first pass shader for a forward lighting test
-	GLint fLightDirUnif = glGetUniformLocation(program, "light_dir");
-	GLint fHalfVectUnif = glGetUniformLocation(program, "half_vect");
-	glUniform4fv(fLightDirUnif, 1, glm::value_ptr(lightDir));
-	glUniform4fv(fHalfVectUnif, 1, glm::value_ptr(halfVect));
 
 	Model polyhedron("res/polyhedron.obj", program);
 	polyhedron.translate(glm::vec3(0.f, 0.f, 2.f));
@@ -150,6 +145,12 @@ int main(int argc, char **argv){
 	GLuint invProjUnif = glGetUniformLocation(quadProg, "inv_proj");
 	glm::mat4 invProj = glm::inverse(projection);
 	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProj));
+
+	//Pass them to the first pass shader for a forward lighting test
+	GLint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
+	GLint halfVectUnif = glGetUniformLocation(quadProg, "half_vect");
+	glUniform4fv(lightDirUnif, 1, glm::value_ptr(lightDir));
+	glUniform4fv(halfVectUnif, 1, glm::value_ptr(halfVect));
 
 	//We render the second pass onto a quad drawn to the NDC
 	Model quad("res/quad.obj", quadProg);
