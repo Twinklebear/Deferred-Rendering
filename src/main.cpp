@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <vector>
 #include <GL/glew.h>
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
@@ -15,6 +16,15 @@
 
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
+
+/*
+ * Load up the models being drawn in the scene and return them in the vector passed
+ * TODO: Setup proper ref-counting for GL objects so I don't need to return a pointer
+ * The view and proj matrices are the viewing and projection matrices for the scene
+ * Texture units 0-2 are reserved for the deferred pass info but 3+ will be used by
+ * model textures
+ */
+std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj);
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -61,36 +71,16 @@ int main(int argc, char **argv){
 		0, NULL, GL_TRUE);
 #endif
 
-	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
-	if (progStatus == -1){
-		return 1;
-	}
-	GLuint program = progStatus;
-	glUseProgram(program);
-
-	GLint projUnif = glGetUniformLocation(program, "proj");
-	GLint viewUnif = glGetUniformLocation(program, "view");
-
-	//Load a texture for the polyhedron
-	GLuint modelTexture = util::loadTexture("res/texture.bmp");
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, modelTexture);
-	GLuint modelTexUnif = glGetUniformLocation(program, "tex_diffuse");
-	glUniform1i(modelTexUnif, 3);
-
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 0.1f, 100.f);
 	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
-	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(projection));
-	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
+
+	std::vector<Model*> models = setupModels(view, projection);
 
 	//The light direction and half vector
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
 	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
-
-	Model polyhedron("res/polyhedron.obj", program);
-	polyhedron.translate(glm::vec3(0.f, 0.f, 2.f));
 
 	//Setup our render targets
 	GLuint fbo;
@@ -129,7 +119,7 @@ int main(int argc, char **argv){
 	util::logGLError("made & attached render targets");
 
 	//Need another shader program for the second pass
-	progStatus = util::loadProgram("res/vsecondpass.glsl", "res/fsecondpass.glsl");
+	GLint progStatus = util::loadProgram("res/vsecondpass.glsl", "res/fsecondpass.glsl");
 	if (progStatus == -1){
 		return 1;
 	}
@@ -172,33 +162,34 @@ int main(int argc, char **argv){
 				quit = true;
 			}
 			if (e.type == SDL_KEYDOWN){
+				//Move the main subject around (model 0)
 				switch (e.key.keysym.sym){
 					case SDLK_f:
 						printFps = !printFps;
 						break;
 					case SDLK_a:
-						polyhedron.translate(frameTime * glm::vec3(-2.f, 0.f, 0.f));
+						models.at(0)->translate(frameTime * glm::vec3(-2.f, 0.f, 0.f));
 						break;
 					case SDLK_d:
-						polyhedron.translate(frameTime * glm::vec3(2.f, 0.f, 0.f));
+						models.at(0)->translate(frameTime * glm::vec3(2.f, 0.f, 0.f));
 						break;
 					case SDLK_w:
-						polyhedron.translate(frameTime * glm::vec3(0.f, 2.f, 0.f));
+						models.at(0)->translate(frameTime * glm::vec3(0.f, 2.f, 0.f));
 						break;
 					case SDLK_s:
-						polyhedron.translate(frameTime * glm::vec3(0.f, -2.f, 0.f));
+						models.at(0)->translate(frameTime * glm::vec3(0.f, -2.f, 0.f));
 						break;
 					case SDLK_z:
-						polyhedron.translate(frameTime * glm::vec3(0.f, 0.f, -2.f));
+						models.at(0)->translate(frameTime * glm::vec3(0.f, 0.f, -2.f));
 						break;
 					case SDLK_x:
-						polyhedron.translate(frameTime * glm::vec3(0.f, 0.f, 2.f));
+						models.at(0)->translate(frameTime * glm::vec3(0.f, 0.f, 2.f));
 						break;
 					case SDLK_q:
-						polyhedron.rotate(glm::rotate<GLfloat>(frameTime * -45.f, 0.f, 1.f, 0.f));
+						models.at(0)->rotate(glm::rotate<GLfloat>(frameTime * -45.f, 0.f, 1.f, 0.f));
 						break;
 					case SDLK_e:
-						polyhedron.rotate(glm::rotate<GLfloat>(frameTime * 45.f, 0.f, 1.f, 0.f));
+						models.at(0)->rotate(glm::rotate<GLfloat>(frameTime * 45.f, 0.f, 1.f, 0.f));
 						break;
 					default:
 						break;
@@ -206,11 +197,12 @@ int main(int argc, char **argv){
 			}
 		}
 		//First pass
-		polyhedron.bind();
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawElements(GL_TRIANGLES, polyhedron.elems(), GL_UNSIGNED_SHORT, 0);
-
+		for (Model *m : models){
+			m->bind();
+			glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
+		}
 		util::logGLError("post first pass");
 
 		//Second pass
@@ -237,5 +229,32 @@ int main(int argc, char **argv){
 	SDL_DestroyWindow(win);
 
 	return 0;
+}
+std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
+	std::vector<Model*> models;
+	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
+	if (progStatus == -1){
+		std::cerr << "Failed to load program\n";
+		return models;
+	}
+	GLuint program = progStatus;
+	glUseProgram(program);
+
+	//Load a texture for the polyhedron
+	GLuint modelTexture = util::loadTexture("res/texture.bmp");
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, modelTexture);
+	GLuint modelTexUnif = glGetUniformLocation(program, "tex_diffuse");
+	glUniform1i(modelTexUnif, 3);
+	//Pass the view/projection matrices
+	GLint projUnif = glGetUniformLocation(program, "proj");
+	GLint viewUnif = glGetUniformLocation(program, "view");
+	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
+	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
+
+	Model *polyhedron = new Model("res/polyhedron.obj", program);
+	polyhedron->translate(glm::vec3(0.f, 0.f, 2.f));
+	models.push_back(polyhedron);
+	return models;
 }
 
