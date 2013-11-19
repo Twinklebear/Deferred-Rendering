@@ -31,6 +31,10 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj);
  * GL_TEXTURE3
  */
 void setupShadowMap(GLuint &fbo, GLuint &tex);
+/*
+ * Perform the shadow map rendering pass
+ */
+void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models);
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -163,18 +167,15 @@ int main(int argc, char **argv){
 	for (Model *m : models){
 		m->setShadowVP(lightVP);
 	}
-	//Render to the shadow map
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	//Polygon offset fill helps resolve depth-fighting
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(2.f, 4.f);
-	for (Model *m : models){
-		m->bindShadow();
-		glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
-	}
-	glDisable(GL_POLYGON_OFFSET_FILL);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
+	//Setup a debug output quad to be drawn to NDC after all other rendering
+	GLuint dbgProgram = util::loadProgram("res/vforward.glsl", "res/fforward_lum.glsl");
+	Model dbgOut("res/quad.obj", dbgProgram);
+	dbgOut.scale(glm::vec3(0.3f, 0.3f, 1.f));
+	dbgOut.translate(glm::vec3(-0.7f, 0.7f, 0.f));
+	glUseProgram(dbgProgram);
+	GLuint dbgTex = glGetUniformLocation(dbgProgram, "tex");
+	glUniform1i(dbgTex, 3);
 
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
@@ -226,6 +227,9 @@ int main(int argc, char **argv){
 				}
 			}
 		}
+		//Shadow map pass
+		renderShadowMap(shadowFbo, models);
+
 		//First pass
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -242,6 +246,12 @@ int main(int argc, char **argv){
 		glDrawElements(GL_TRIANGLES, quad.elems(), GL_UNSIGNED_SHORT, 0);
 
 		util::logGLError("post second pass");
+
+		//Draw debug texture
+		glDisable(GL_DEPTH_TEST);
+		dbgOut.bind();
+		glDrawElements(GL_TRIANGLES, dbgOut.elems(), GL_UNSIGNED_SHORT, 0);
+		glEnable(GL_DEPTH_TEST);
 
 		SDL_GL_SwapWindow(win);
 		int end = SDL_GetTicks();
@@ -348,5 +358,19 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	util::logGLError("Setup shadow map fbo & texture");
+}
+void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models){
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	//Polygon offset fill helps resolve depth-fighting
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(2.f, 4.f);
+	for (Model *m : models){
+		m->bindShadow();
+		glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
+	}
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 }
 
