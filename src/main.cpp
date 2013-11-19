@@ -156,10 +156,9 @@ int main(int argc, char **argv){
 	GLuint shadowTex, shadowFbo;
 	setupShadowMap(shadowFbo, shadowTex);
 	//Setup the light's view & projection matrix for the light
-	//I don't think this is right for a distant light though, also unsure about the
-	//up vector here
 	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
+	//For a directional light should use ortho, but will use frustum to follow book for now
 	glm::mat4 lightVP = glm::frustum(-1.f, 1.f, -1.f, 1.f, 1.f, 100.f) * lightView;
 	for (Model *m : models){
 		m->setShadowVP(lightVP);
