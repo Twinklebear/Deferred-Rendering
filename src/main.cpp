@@ -241,11 +241,11 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUseProgram(program);
 
 	//Load a texture for the polyhedron
-	GLuint modelTexture = util::loadTexture("res/texture.bmp");
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, modelTexture);
-	GLuint modelTexUnif = glGetUniformLocation(program, "tex_diffuse");
-	glUniform1i(modelTexUnif, 3);
+	GLuint texture = util::loadTexture("res/texture.bmp");
+	glBindTexture(GL_TEXTURE_2D, texture);
+	GLuint texUnif = glGetUniformLocation(program, "tex_diffuse");
+	glUniform1i(texUnif, 3);
 	//Pass the view/projection matrices
 	GLint projUnif = glGetUniformLocation(program, "proj");
 	GLint viewUnif = glGetUniformLocation(program, "view");
@@ -255,6 +255,36 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	Model *polyhedron = new Model("res/polyhedron.obj", program);
 	polyhedron->translate(glm::vec3(0.f, 0.f, 2.f));
 	models.push_back(polyhedron);
+
+	//TODO: Perhaps in the future a way to share programs across models and optimize drawing
+	//order to reduce calls to glUseProgram? could also share proj/view matrices with UBOs
+	progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
+	if (progStatus == -1){
+		std::cerr << "Failed to load program\n";
+		return models;
+	}
+	program = progStatus;
+	glUseProgram(program);
+
+	//Load a texture for the floor
+	glActiveTexture(GL_TEXTURE4);
+	texture = util::loadTexture("res/texture2.bmp");
+	glBindTexture(GL_TEXTURE_2D, texture);
+	texUnif = glGetUniformLocation(program, "tex_diffuse");
+	glUniform1i(texUnif, 4);
+	
+	projUnif = glGetUniformLocation(program, "proj");
+	viewUnif = glGetUniformLocation(program, "view");
+	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
+	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
+
+	Model *floor = new Model("res/quad.obj", program);
+	//Get it laying perpindicularish to the light direction and behind the camera some
+	floor->scale(glm::vec3(3.f, 3.f, 1.f));
+	floor->rotate(glm::rotate(-35.f, 1.f, 0.f, 0.f));
+	floor->rotate(glm::rotate(20.f, 0.f, 1.f, 0.f));
+	models.push_back(floor);
+
 	return models;
 }
 

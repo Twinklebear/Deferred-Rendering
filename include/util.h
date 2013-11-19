@@ -31,7 +31,9 @@ namespace util {
 	/*
 	 * Load an image into an OpenGL texture. SDL is used to read the image into
 	 * a surface which is then passed to OpenGL. A new texture id is created
-	 * and returned if successful
+	 * and returned if successful. The texture unit desired for this texture
+	 * should be set active before loading the texture as it will be bound during
+	 * the loading process
 	 * Note: To lazy to setup a FindSDL2_Image for my windows machine so
 	 * just BMP support for now
 	 */
