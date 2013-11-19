@@ -21,10 +21,16 @@ const int WIN_HEIGHT = 480;
  * Load up the models being drawn in the scene and return them in the vector passed
  * TODO: Setup proper ref-counting for GL objects so I don't need to return a pointer
  * The view and proj matrices are the viewing and projection matrices for the scene
- * Texture units 0-2 are reserved for the deferred pass info but 3+ will be used by
- * model textures
+ * Texture units 0-2 are reserved for the deferred pass and 3 is used by the shadow map
+ * but 4+ will be used by model textures
  */
 std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj);
+/*
+ * Setup the depth buffer for the shadow map pass and return the texture
+ * and framebuffer in the params passed. The texture will be active in
+ * GL_TEXTURE3
+ */
+void setupShadowMap(GLuint &fbo, GLuint &tex);
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -70,7 +76,7 @@ int main(int argc, char **argv){
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
-
+	
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 0.1f, 100.f);
 	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
@@ -98,18 +104,18 @@ int main(int argc, char **argv){
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIN_WIDTH, WIN_HEIGHT, 0, GL_RGB,
 			GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D,
 			texBuffers[i], 0);
 	}
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, texBuffers[2]);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, WIN_WIDTH, WIN_HEIGHT,
-		0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, WIN_WIDTH, WIN_HEIGHT,
+		0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 		texBuffers[2], 0);
 
@@ -144,6 +150,10 @@ int main(int argc, char **argv){
 
 	//We render the second pass onto a quad drawn to the NDC
 	Model quad("res/quad.obj", quadProg);
+
+	//Setup the shadow map
+	GLuint shadowTex, shadowFbo;
+	setupShadowMap(shadowFbo, shadowTex);
 	
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
@@ -153,7 +163,6 @@ int main(int argc, char **argv){
 	float frameTime = 0.0;
 	bool printFps = false;
 	int start = SDL_GetTicks();
-
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
@@ -241,11 +250,11 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUseProgram(program);
 
 	//Load a texture for the polyhedron
-	glActiveTexture(GL_TEXTURE3);
+	glActiveTexture(GL_TEXTURE4);
 	GLuint texture = util::loadTexture("res/texture.bmp");
 	glBindTexture(GL_TEXTURE_2D, texture);
 	GLuint texUnif = glGetUniformLocation(program, "tex_diffuse");
-	glUniform1i(texUnif, 3);
+	glUniform1i(texUnif, 4);
 	//Pass the view/projection matrices
 	GLint projUnif = glGetUniformLocation(program, "proj");
 	GLint viewUnif = glGetUniformLocation(program, "view");
@@ -253,7 +262,7 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
 	Model *polyhedron = new Model("res/polyhedron.obj", program);
-	polyhedron->translate(glm::vec3(0.f, 0.f, 2.f));
+	polyhedron->translate(glm::vec3(1.f, 0.f, 1.f));
 	models.push_back(polyhedron);
 
 	//TODO: Perhaps in the future a way to share programs across models and optimize drawing
@@ -267,11 +276,11 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUseProgram(program);
 
 	//Load a texture for the floor
-	glActiveTexture(GL_TEXTURE4);
+	glActiveTexture(GL_TEXTURE5);
 	texture = util::loadTexture("res/texture2.bmp");
 	glBindTexture(GL_TEXTURE_2D, texture);
 	texUnif = glGetUniformLocation(program, "tex_diffuse");
-	glUniform1i(texUnif, 4);
+	glUniform1i(texUnif, 5);
 	
 	projUnif = glGetUniformLocation(program, "proj");
 	viewUnif = glGetUniformLocation(program, "view");
@@ -286,5 +295,30 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	models.push_back(floor);
 
 	return models;
+}
+void setupShadowMap(GLuint &fbo, GLuint &tex){
+	glActiveTexture(GL_TEXTURE3);
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	//Will just use a shadow map equal to the window dimensions
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32,
+		WIN_WIDTH, WIN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//Setup depth comparison mode
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE,
+		GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	//Don't wrap edges
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, tex, 0);
+	glDrawBuffer(GL_NONE);
+
+	util::logGLError("Setup shadow map fbo & texture");
 }
 
