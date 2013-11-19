@@ -176,9 +176,7 @@ int main(int argc, char **argv){
 	}
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
+
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
 	}
@@ -335,8 +333,7 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	//Setup depth comparison mode
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE,
-		GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE,	GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	//Don't wrap edges
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -344,6 +341,8 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	//The book attaches with DEPTH_STENCIL_ATTACHMENT but this gives me an error
+	//that the framebuffer is incomplete?
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 		GL_TEXTURE_2D, tex, 0);
 	glDrawBuffer(GL_NONE);
