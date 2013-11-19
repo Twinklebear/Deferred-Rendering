@@ -62,7 +62,8 @@ int main(int argc, char **argv){
 	//and it sounds like it can be safely ignored
 	util::logGLError("Post GLEW init");
 
-	glClearColor(0, 0, 0, 1);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glClearDepth(1.f);
 	glEnable(GL_DEPTH_TEST);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
@@ -78,14 +79,14 @@ int main(int argc, char **argv){
 #endif
 	
 	glm::mat4 projection = glm::perspective(75.f,
-		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 0.1f, 100.f);
+		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
 	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 
 	std::vector<Model*> models = setupModels(view, projection);
 
 	//The light direction and half vector
-	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
+	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 0.f, 1.f, 0.f));
 	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
 
 	//Setup our render targets
@@ -154,6 +155,29 @@ int main(int argc, char **argv){
 	//Setup the shadow map
 	GLuint shadowTex, shadowFbo;
 	setupShadowMap(shadowFbo, shadowTex);
+	//Setup the light's view & projection matrix for the light
+	//I don't think this is right for a distant light though, also unsure about the
+	//up vector here
+	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
+		glm::vec3(0.f, 1.f, 0.f));
+	glm::mat4 lightVP = glm::frustum(-1.f, 1.f, -1.f, 1.f, 1.f, 100.f) * lightView;
+	for (Model *m : models){
+		m->setShadowVP(lightVP);
+	}
+	//Render to the shadow map
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	//Polygon offset fill helps resolve depth-fighting
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(2.f, 4.f);
+	for (Model *m : models){
+		m->bindShadow();
+		glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
+	}
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
@@ -231,6 +255,9 @@ int main(int argc, char **argv){
 			std::cout << "frame time: " << frameTime << "ms\n";
 		}
 	}
+	glDeleteFramebuffers(1, &shadowFbo);
+	glDeleteTextures(1, &shadowTex);
+
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(3, texBuffers);
 	
@@ -261,7 +288,8 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
-	Model *polyhedron = new Model("res/polyhedron.obj", program);
+	GLuint shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
+	Model *polyhedron = new Model("res/polyhedron.obj", program, shadowProgram);
 	polyhedron->translate(glm::vec3(1.f, 0.f, 1.f));
 	models.push_back(polyhedron);
 
@@ -287,7 +315,8 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
-	Model *floor = new Model("res/quad.obj", program);
+	shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
+	Model *floor = new Model("res/quad.obj", program, shadowProgram);
 	//Get it laying perpindicularish to the light direction and behind the camera some
 	floor->scale(glm::vec3(3.f, 3.f, 1.f));
 	floor->rotate(glm::rotate(-35.f, 1.f, 0.f, 0.f));
@@ -315,9 +344,10 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 		GL_TEXTURE_2D, tex, 0);
 	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	util::logGLError("Setup shadow map fbo & texture");
 }

@@ -11,16 +11,19 @@
  * assuming that the program inputs are 0,1,2: pos, normals, uv
  * must also be assigned a program to use for rendering, but other
  * program inputs must be set separately
+ * TODO: not hack in shadow pass, perhaps look into sharing shaders better?
  */
 class Model {
 	GLuint vao;
 	//The vbo and ebo
 	GLuint buf[2];
 	size_t nElems;
-	GLuint program;
+	//The regular and shadow pass shader programs
+	//shadowProgram will be 0 if this model isn't given a shadow pass program
+	GLuint program, shadowProgram;
 	//We keep the matrices separate and compose only when sending to GPU
 	//to not screw up order of operation
-	GLint matUnif;
+	GLint matUnif, shadowMatUnif;
 	glm::mat4 translation, rotation, scaling;
 
 public:
@@ -30,7 +33,7 @@ public:
 	 * and have a uniform mat4 input for the model matrix if not doing instanced
 	 * rendering
 	 */
-	Model(const std::string &file, GLuint program);
+	Model(const std::string &file, GLuint program, GLuint shadowProgram = 0);
 	/*
 	 * Free the model's buffers and program
 	 */
@@ -39,6 +42,15 @@ public:
 	 * Bind the model and its program for rendering
 	 */
 	void bind();
+	/*
+	 * Bind the model and its program for shadow map pass
+	 */
+	void bindShadow();
+	/*
+	 * Set the shadow pass view/projection matrix
+	 * this is sorta hacked in
+	 */
+	void setShadowVP(const glm::mat4 &vp);
 	/*
 	 * Get the number of elements in the element buffer
 	 */
