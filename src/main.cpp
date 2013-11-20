@@ -342,7 +342,8 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 	//Will just use a shadow map equal to the window dimensions
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32,
+	//Must use specific formats for depth_stencil attachment
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH32F_STENCIL8,
 		WIN_WIDTH, WIN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	//No mip maps
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
@@ -357,13 +358,40 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	//The book attaches with DEPTH_STENCIL_ATTACHMENT but this gives me an error
-	//that the framebuffer is incomplete?
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
 		GL_TEXTURE_2D, tex, 0);
 	glDrawBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	switch (fboStatus){
+	case GL_FRAMEBUFFER_UNDEFINED:
+		std::cout << "Shadow FBO incomplete: undefined\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		std::cout << "Shadow FBO incomplete: attachment\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		std::cout << "Shadow FBO incomplete: missing attachment\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+		std::cout << "Shadow FBO incomplete: draw buffer\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+		std::cout << "Shadow FBO incomplete: read buffer\n";
+		break;
+	case GL_FRAMEBUFFER_UNSUPPORTED:
+		std::cout << "Shadow FBO incomplete: unsupported\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+		std::cout << "Shadow FBO incomplete: multisample\n";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+		std::cout << "Shadow FBO incomplete: layer targets\n";
+		break;
+	default:
+		break;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	util::logGLError("Setup shadow map fbo & texture");
 }
 void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models){
