@@ -249,8 +249,13 @@ int main(int argc, char **argv){
 
 		//Draw debug texture
 		glDisable(GL_DEPTH_TEST);
+		//Unset the compare mode so that we can draw it properly
+		glActiveTexture(GL_TEXTURE3);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 		dbgOut.bind();
 		glDrawElements(GL_TRIANGLES, dbgOut.elems(), GL_UNSIGNED_SHORT, 0);
+		//Set it back to the shadow map compare mode
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		glEnable(GL_DEPTH_TEST);
 
 		SDL_GL_SwapWindow(win);
@@ -339,6 +344,8 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	//Will just use a shadow map equal to the window dimensions
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32,
 		WIN_WIDTH, WIN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	//No mip maps
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	//Setup depth comparison mode
