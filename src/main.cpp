@@ -344,7 +344,7 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	//Will just use a shadow map equal to the window dimensions
 	//Must use specific formats for depth_stencil attachment
 	//Mesa refuses to accept this type/format combination, what is valid?
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH32F_STENCIL8,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F,
 		WIN_WIDTH, WIN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	//No mip maps
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
@@ -359,8 +359,7 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-		GL_TEXTURE_2D, tex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex, 0);
 	glDrawBuffer(GL_NONE);
 
 	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
