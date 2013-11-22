@@ -310,7 +310,8 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
 	GLuint shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
-	Model *polyhedron = new Model("res/polyhedron.obj", program, shadowProgram);
+	//With suzanne the self-shadowing is much easier to see
+	Model *polyhedron = new Model("res/suzanne.obj", program, shadowProgram);
 	polyhedron->translate(glm::vec3(1.f, 0.f, 1.f));
 	models.push_back(polyhedron);
 
