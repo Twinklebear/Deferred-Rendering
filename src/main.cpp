@@ -92,6 +92,11 @@ int main(int argc, char **argv){
 	//The light direction and half vector
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 0.f, 1.f, 0.f));
 	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
+	//Setup the light's view & projection matrix for the light
+	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
+		glm::vec3(0.f, 1.f, 0.f));
+	//For a directional light orthographic projection (point use perspective)
+	glm::mat4 lightVP = glm::ortho(-4.f, 4.f, -4.f, 4.f, 1.f, 100.f) * lightView;
 
 	//Setup our render targets
 	GLuint fbo;
@@ -144,14 +149,23 @@ int main(int argc, char **argv){
 	glUniform1i(depthUnif, 2);
 
 	GLuint invProjUnif = glGetUniformLocation(quadProg, "inv_proj");
+	GLuint invViewUnif = glGetUniformLocation(quadProg, "inv_view");
 	glm::mat4 invProj = glm::inverse(projection);
+	glm::mat4 invView = glm::inverse(view);
 	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProj));
+	glUniformMatrix4fv(invViewUnif, 1, GL_FALSE, glm::value_ptr(invView));
 
 	//Pass them to the first pass shader for a forward lighting test
-	GLint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
-	GLint halfVectUnif = glGetUniformLocation(quadProg, "half_vect");
+	GLuint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
+	GLuint halfVectUnif = glGetUniformLocation(quadProg, "half_vect");
 	glUniform4fv(lightDirUnif, 1, glm::value_ptr(lightDir));
 	glUniform4fv(halfVectUnif, 1, glm::value_ptr(halfVect));
+
+	//Shadow map is bound to texture unit 3
+	GLuint shadowMapUnif = glGetUniformLocation(quadProg, "shadow_map");
+	glUniform1i(shadowMapUnif, 3);
+	GLuint lightVPUnif = glGetUniformLocation(quadProg, "light_vp");
+	glUniformMatrix4fv(lightVPUnif, 1, GL_FALSE, glm::value_ptr(lightVP));
 
 	//We render the second pass onto a quad drawn to the NDC
 	Model quad("res/quad.obj", quadProg);
@@ -159,11 +173,6 @@ int main(int argc, char **argv){
 	//Setup the shadow map
 	GLuint shadowTex, shadowFbo;
 	setupShadowMap(shadowFbo, shadowTex);
-	//Setup the light's view & projection matrix for the light
-	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
-		glm::vec3(0.f, 1.f, 0.f));
-	//For a directional light should use ortho, but will use frustum to follow book for now
-	glm::mat4 lightVP = glm::frustum(-1.f, 1.f, -1.f, 1.f, 1.f, 100.f) * lightView;
 	for (Model *m : models){
 		m->setShadowVP(lightVP);
 	}

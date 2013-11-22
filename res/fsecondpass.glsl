@@ -3,7 +3,10 @@
 uniform sampler2D diffuse;
 uniform sampler2D normal;
 uniform sampler2D depth;
+uniform sampler2DShadow shadow_map;
 uniform mat4 inv_proj;
+uniform mat4 inv_view;
+uniform mat4 light_vp;
 uniform vec4 light_dir;
 uniform vec4 half_vect;
 
@@ -42,10 +45,18 @@ void main(void){
 		//Just give everyone 50 shininess
 		spec = pow(spec, 50.f);
 	}
+	//Check if we're in shadow
+	vec4 shadow_pos = light_vp * inv_view * compute_view_pos();
+	//Not needed for directional light but we do need to do the perspective
+	//division for point lights (perspective proj.)
+	shadow_pos /= shadow_pos.w;
+	//Scale the depth values into projection space
+	shadow_pos = (shadow_pos + 1.f) / 2.f;
+	float f = textureProj(shadow_map, shadow_pos);
 	//Apply some ambient as well and set light color to white
 	//with a rather low strength
-	vec3 scattered = vec3(0.2f, 0.2f, 0.2f) + 1.f * diff;
-	vec3 reflected = vec3(1.f * spec * 0.4f);
+	vec3 scattered = vec3(0.2f, 0.2f, 0.2f) + f * diff;
+	vec3 reflected = f * vec3(1.f * spec * 0.4f);
 	color = texture(diffuse, f_uv);
 	color.xyz = min(color.xyz * scattered + reflected, vec3(1.f));
 }
