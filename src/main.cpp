@@ -87,19 +87,26 @@ int main(int argc, char **argv){
 	
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
-	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
+	glm::vec4 viewPos = glm::vec4(0.f, 0.f, 5.f, 1.f);
+	glm::mat4 view = glm::lookAt(glm::vec3(viewPos), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
+	glm::vec4 viewDir(0.f, 0.f, 1.f, 0.f);
 
 	std::vector<Model*> models = setupModels(view, projection);
 
-	//The light direction and half vector
+	//The spotlight direction and position, simply place the light a bit back along
+	//the direction it's coming from
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 0.f, 1.f, 0.f));
-	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
+	glm::vec4 lightPos = 6 * lightDir;
+	lightPos.w = 1.f;
 	//Setup the light's view & projection matrix for the light
-	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
+	glm::mat4 lightView = glm::lookAt(glm::vec3(lightPos), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
-	//For a directional light orthographic projection (point use perspective)
-	glm::mat4 lightVP = glm::ortho(-4.f, 4.f, -4.f, 4.f, 1.f, 100.f) * lightView;
+	//The max angle the spotlight illuminates off of the direction
+	GLfloat spotlightAngle = 20.f;
+	//The full FoV y of the spotlight is 2*angle to account for +/-
+	glm::mat4 lightVP = glm::perspective(2.f * spotlightAngle, 1.f, 1.f, 100.f)
+		* lightView;
 
 	//Setup our render targets
 	GLuint fbo;
@@ -138,7 +145,8 @@ int main(int argc, char **argv){
 	util::logGLError("made & attached render targets");
 
 	//Need another shader program for the second pass
-	GLint progStatus = util::loadProgram("res/vsecondpass.glsl", "res/fsecondpass.glsl");
+	GLint progStatus = util::loadProgram("res/vsecondpass.glsl",
+		"res/fsecondpass.glsl");
 	if (progStatus == -1){
 		return 1;
 	}
@@ -158,11 +166,14 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProj));
 	glUniformMatrix4fv(invViewUnif, 1, GL_FALSE, glm::value_ptr(invView));
 
-	//Pass them to the first pass shader for a forward lighting test
 	GLuint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
-	GLuint halfVectUnif = glGetUniformLocation(quadProg, "half_vect");
+	GLuint lightPosUnif = glGetUniformLocation(quadProg, "light_pos");
+	GLuint viewPosUnif = glGetUniformLocation(quadProg, "view_pos");
+	GLuint spotlightAngleUnif = glGetUniformLocation(quadProg, "spotlight_angle");
 	glUniform4fv(lightDirUnif, 1, glm::value_ptr(lightDir));
-	glUniform4fv(halfVectUnif, 1, glm::value_ptr(halfVect));
+	glUniform4fv(lightPosUnif, 1, glm::value_ptr(lightPos));
+	glUniform4fv(viewPosUnif, 1, glm::value_ptr(viewPos));
+	glUniform1f(spotlightAngleUnif, std::cos(spotlightAngle * 3.145 / 180.0));
 
 	//Shadow map is bound to texture unit 3
 	GLuint shadowMapUnif = glGetUniformLocation(quadProg, "shadow_map");
@@ -181,7 +192,8 @@ int main(int argc, char **argv){
 	}
 	
 	//Setup a debug output quad to be drawn to NDC after all other rendering
-	GLuint dbgProgram = util::loadProgram("res/vforward.glsl", "res/fforward_lum.glsl");
+	GLuint dbgProgram = util::loadProgram("res/vforward.glsl",
+		"res/fforward_lum.glsl");
 	Model dbgOut("res/quad.obj", dbgProgram);
 	dbgOut.scale(glm::vec3(0.3f, 0.3f, 1.f));
 	dbgOut.translate(glm::vec3(-0.7f, 0.7f, 0.f));
@@ -344,7 +356,6 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	Model *floor = new Model("res/quad.obj", program, shadowProgram);
 	//Get it laying perpindicularish to the light direction and behind the camera some
 	floor->scale(glm::vec3(3.f, 3.f, 1.f));
-	floor->rotate(glm::rotate(-35.f, 1.f, 0.f, 0.f));
 	floor->rotate(glm::rotate(20.f, 0.f, 1.f, 0.f));
 	models.push_back(floor);
 
