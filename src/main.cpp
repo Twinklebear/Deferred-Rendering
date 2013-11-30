@@ -23,6 +23,9 @@ const int WIN_HEIGHT = 480;
  * The view and proj matrices are the viewing and projection matrices for the scene
  * Texture units 0-2 are reserved for the deferred pass and 3 is used by the shadow map
  * but 4+ will be used by model textures
+ * As a side note, the handles to the textures created here are lost and leaked
+ * not a big deal now, but should make a wrapper around Texture2D that can be
+ * associated with a Model or something
  */
 std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj);
 /*
