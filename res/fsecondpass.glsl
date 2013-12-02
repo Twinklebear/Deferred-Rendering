@@ -8,7 +8,7 @@ uniform mat4 inv_proj;
 uniform mat4 inv_view;
 uniform mat4 light_vp;
 uniform vec4 light_dir;
-uniform vec4 half_vect;
+uniform vec4 view_pos;
 
 in vec2 f_uv;
 
@@ -32,10 +32,16 @@ vec4 compute_view_pos(void){
 }
 
 void main(void){
+	vec4 world_pos = inv_view * compute_view_pos();
 	vec4 n = texture(normal, f_uv);
 	n = n * 2.f - 1.f;
 	n.w = 0.f;
 	n = normalize(n);
+	vec4 v = view_pos - world_pos;
+	v.w = 0.f;
+	v = normalize(v);
+	vec4 half_vect = normalize(light_dir + v);
+
 	float diff = max(0.f, dot(n, light_dir));
 	float spec = max(0.f, dot(n, half_vect));
 	if (diff == 0.f){
@@ -46,7 +52,7 @@ void main(void){
 		spec = pow(spec, 50.f);
 	}
 	//Check if we're in shadow
-	vec4 shadow_pos = light_vp * inv_view * compute_view_pos();
+	vec4 shadow_pos = light_vp * world_pos;
 	//Not needed for directional light but we do need to do the perspective
 	//division for point lights (perspective proj.)
 	shadow_pos /= shadow_pos.w;

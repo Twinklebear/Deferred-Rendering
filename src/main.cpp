@@ -87,14 +87,14 @@ int main(int argc, char **argv){
 	
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
-	glm::mat4 view = glm::lookAt(glm::vec3(0.f, 0.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
+	glm::vec4 viewPos(0.f, 0.f, 5.f, 1.f);
+	glm::mat4 view = glm::lookAt(glm::vec3(viewPos), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 
 	std::vector<Model*> models = setupModels(view, projection);
 
 	//The light direction and half vector
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 0.f, 1.f, 0.f));
-	glm::vec4 halfVect = glm::normalize(lightDir + glm::vec4(0.f, 0.f, 1.f, 0.f));
 	//Setup the light's view & projection matrix for the light
 	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
@@ -160,9 +160,9 @@ int main(int argc, char **argv){
 
 	//Pass them to the first pass shader for a forward lighting test
 	GLuint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
-	GLuint halfVectUnif = glGetUniformLocation(quadProg, "half_vect");
+	GLuint viewPosUnif = glGetUniformLocation(quadProg, "view_pos");
 	glUniform4fv(lightDirUnif, 1, glm::value_ptr(lightDir));
-	glUniform4fv(halfVectUnif, 1, glm::value_ptr(halfVect));
+	glUniform4fv(viewPosUnif, 1, glm::value_ptr(viewPos));
 
 	//Shadow map is bound to texture unit 3
 	GLuint shadowMapUnif = glGetUniformLocation(quadProg, "shadow_map");
