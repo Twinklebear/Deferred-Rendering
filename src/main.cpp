@@ -37,7 +37,7 @@ void setupShadowMap(GLuint &fbo, GLuint &tex);
 /*
  * Perform the shadow map rendering pass
  */
-void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models);
+void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models, const int numInstances);
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -87,7 +87,7 @@ int main(int argc, char **argv){
 	
 	glm::mat4 projection = glm::perspective(75.f,
 		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
-	glm::vec4 viewPos(0.f, 0.f, 5.f, 1.f);
+	glm::vec4 viewPos(0.f, 6.f, 6.f, 1.f);
 	glm::mat4 view = glm::lookAt(glm::vec3(viewPos), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 
@@ -189,10 +189,37 @@ int main(int argc, char **argv){
 	GLuint dbgTex = glGetUniformLocation(dbgProgram, "tex");
 	glUniform1i(dbgTex, 3);
 
+	//For instanced rendering: Bind the cube and slip our model matrix buffer into the VAO as
+	//attribute 3
+	const int numInstances = 6;
+	//Location of the first instance
+	glm::vec3 firstPos(-4.f, 1.f, -2.f);
+	glm::mat4 modelMats[numInstances];
+	//Build up a few model matrices and give them ordered positions
+	int rowLength = 3;
+	for (int i = 0; i < numInstances; ++i){
+		glm::vec3 offset(4 * (i % rowLength), 0.f, 4 * (i / rowLength));
+		modelMats[i] = glm::translate<GLfloat>(offset + firstPos);
+	}
+	models.at(0)->bind();
+	GLuint modelMatBuf;
+	glGenBuffers(1, &modelMatBuf);
+	glBindBuffer(GL_ARRAY_BUFFER, modelMatBuf);
+	glBufferData(GL_ARRAY_BUFFER, numInstances * sizeof(glm::mat4), &modelMats[0], GL_STATIC_DRAW);
+	//Enable each column of the matrix
+	for (int i = 0; i < numInstances; ++i){
+		for (int j = 0; j < 4; ++j){
+			glEnableVertexAttribArray(3 + j);
+			glVertexAttribPointer(3 + j, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+				(void*)(sizeof(glm::vec4) * j));
+			glVertexAttribDivisor(3 + j, 1);
+		}
+	}
+
 	if (util::logGLError("Pre-loop error check")){
 		return 1;
 	}
-	
+
 	//For tracking fps
 	float frameTime = 0.0;
 	bool printFps = false;
@@ -204,51 +231,22 @@ int main(int argc, char **argv){
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
 				quit = true;
 			}
-			if (e.type == SDL_KEYDOWN){
-				//Move the main subject around (model 0)
-				switch (e.key.keysym.sym){
-					case SDLK_f:
-						printFps = !printFps;
-						break;
-					case SDLK_a:
-						models.at(0)->translate(frameTime * glm::vec3(-2.f, 0.f, 0.f));
-						break;
-					case SDLK_d:
-						models.at(0)->translate(frameTime * glm::vec3(2.f, 0.f, 0.f));
-						break;
-					case SDLK_w:
-						models.at(0)->translate(frameTime * glm::vec3(0.f, 2.f, 0.f));
-						break;
-					case SDLK_s:
-						models.at(0)->translate(frameTime * glm::vec3(0.f, -2.f, 0.f));
-						break;
-					case SDLK_z:
-						models.at(0)->translate(frameTime * glm::vec3(0.f, 0.f, -2.f));
-						break;
-					case SDLK_x:
-						models.at(0)->translate(frameTime * glm::vec3(0.f, 0.f, 2.f));
-						break;
-					case SDLK_q:
-						models.at(0)->rotate(glm::rotate<GLfloat>(frameTime * -45.f, 0.f, 1.f, 0.f));
-						break;
-					case SDLK_e:
-						models.at(0)->rotate(glm::rotate<GLfloat>(frameTime * 45.f, 0.f, 1.f, 0.f));
-						break;
-					default:
-						break;
-				}
-			}
 		}
 		//Shadow map pass
-		renderShadowMap(shadowFbo, models);
+		renderShadowMap(shadowFbo, models, numInstances);
 
 		//First pass
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		for (Model *m : models){
-			m->bind();
-			glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
-		}
+		//The instanced cubes
+		models.at(0)->bind();
+		glDrawElementsInstanced(GL_TRIANGLES, models.at(0)->elems(), GL_UNSIGNED_SHORT,
+			NULL, numInstances);
+
+		//Draw the floor
+		models.at(1)->bind();
+		glDrawElements(GL_TRIANGLES, models.at(1)->elems(), GL_UNSIGNED_SHORT, 0);
+
 		util::logGLError("post first pass");
 
 		//Second pass
@@ -279,6 +277,8 @@ int main(int argc, char **argv){
 			std::cout << "frame time: " << frameTime << "ms\n";
 		}
 	}
+	glDeleteBuffers(1, &modelMatBuf);
+
 	glDeleteFramebuffers(1, &shadowFbo);
 	glDeleteTextures(1, &shadowTex);
 
@@ -292,7 +292,7 @@ int main(int argc, char **argv){
 }
 std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	std::vector<Model*> models;
-	GLint progStatus = util::loadProgram("res/vshader.glsl", "res/fshader.glsl");
+	GLint progStatus = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");
 	if (progStatus == -1){
 		std::cerr << "Failed to load program\n";
 		return models;
@@ -312,10 +312,9 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
 
-	GLuint shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
+	GLuint shadowProgram = util::loadProgram("res/vshadow_instanced.glsl", "res/fshadow.glsl");
 	//With suzanne the self-shadowing is much easier to see
 	Model *polyhedron = new Model("res/suzanne.obj", program, shadowProgram);
-	polyhedron->translate(glm::vec3(1.f, 0.f, 1.f));
 	models.push_back(polyhedron);
 
 	//TODO: Perhaps in the future a way to share programs across models and optimize drawing
@@ -343,9 +342,8 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
 	Model *floor = new Model("res/quad.obj", program, shadowProgram);
 	//Get it laying perpindicularish to the light direction and behind the camera some
-	floor->scale(glm::vec3(3.f, 3.f, 1.f));
-	floor->rotate(glm::rotate(-35.f, 1.f, 0.f, 0.f));
-	floor->rotate(glm::rotate(20.f, 0.f, 1.f, 0.f));
+	floor->scale(glm::vec3(8.f, 8.f, 1.f));
+	floor->rotate(glm::rotate(-90.f, 1.f, 0.f, 0.f));
 	models.push_back(floor);
 
 	return models;
@@ -407,16 +405,17 @@ void setupShadowMap(GLuint &fbo, GLuint &tex){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	util::logGLError("Setup shadow map fbo & texture");
 }
-void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models){
+void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models, const int numInstances){
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	//Polygon offset fill helps resolve depth-fighting
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(2.f, 4.f);
-	for (Model *m : models){
-		m->bindShadow();
-		glDrawElements(GL_TRIANGLES, m->elems(), GL_UNSIGNED_SHORT, 0);
-	}
+	//Only draw the instanced foreground cubes
+	models.at(0)->bind();
+	glDrawElementsInstanced(GL_TRIANGLES, models.at(0)->elems(), GL_UNSIGNED_SHORT,
+		NULL, numInstances);
+
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
