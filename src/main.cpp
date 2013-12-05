@@ -94,12 +94,12 @@ int main(int argc, char **argv){
 	std::vector<Model*> models = setupModels(view, projection);
 
 	//The light direction and half vector
-	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 0.f, 1.f, 0.f));
+	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
 	//Setup the light's view & projection matrix for the light
-	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 8.f, glm::vec3(0.f, 0.f, 0.f),
+	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 40.f, glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 	//For a directional light orthographic projection (point use perspective)
-	glm::mat4 lightVP = glm::ortho(-4.f, 4.f, -4.f, 4.f, 1.f, 100.f) * lightView;
+	glm::mat4 lightVP = glm::ortho(-8.f, 8.f, -8.f, 8.f, 1.f, 100.f) * lightView;
 
 	//Setup our render targets
 	GLuint fbo;
@@ -412,7 +412,7 @@ void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models, const int n
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(2.f, 4.f);
 	//Only draw the instanced foreground cubes
-	models.at(0)->bind();
+	models.at(0)->bindShadow();
 	glDrawElementsInstanced(GL_TRIANGLES, models.at(0)->elems(), GL_UNSIGNED_SHORT,
 		NULL, numInstances);
 
