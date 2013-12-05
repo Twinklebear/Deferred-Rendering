@@ -231,6 +231,15 @@ int main(int argc, char **argv){
 			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
 				quit = true;
 			}
+			if (e.type == SDL_KEYDOWN){
+				switch (e.key.keysym.sym){
+				case SDLK_f:
+					printFps = !printFps;
+					break;
+				default:
+					break;
+				}
+			}
 		}
 		//Shadow map pass
 		renderShadowMap(shadowFbo, models, numInstances);
