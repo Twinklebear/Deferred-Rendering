@@ -1,7 +1,11 @@
 #version 330
 
-uniform mat4 view;
-uniform mat4 proj;
+layout(std140) uniform ViewProj {
+	mat4 view;
+	mat4 proj;
+	mat4 inv_view;
+	mat4 inv_proj;
+};
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;

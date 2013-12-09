@@ -1,11 +1,16 @@
 #version 330
 
+layout(std140) uniform ViewProj {
+	mat4 view;
+	mat4 proj;
+	mat4 inv_view;
+	mat4 inv_proj;
+};
+
 uniform sampler2D diffuse;
 uniform sampler2D normal;
 uniform sampler2D depth;
 uniform sampler2DShadow shadow_map;
-uniform mat4 inv_proj;
-uniform mat4 inv_view;
 uniform mat4 light_vp;
 uniform vec4 light_dir;
 uniform vec4 view_pos;

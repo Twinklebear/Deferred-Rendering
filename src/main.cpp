@@ -19,6 +19,8 @@ const int WIN_HEIGHT = 480;
 
 /*
  * Load up the models being drawn in the scene and return them in the vector passed
+ * Will set the models to use the uniform block containing the view and projection
+ * matrices to the uniform buffer passed in
  * TODO: Setup proper ref-counting for GL objects so I don't need to return a pointer
  * The view and proj matrices are the viewing and projection matrices for the scene
  * Texture units 0-2 are reserved for the deferred pass and 3 is used by the shadow map
@@ -27,7 +29,7 @@ const int WIN_HEIGHT = 480;
  * not a big deal now, but should make a wrapper around Texture2D that can be
  * associated with a Model or something
  */
-std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj);
+std::vector<Model*> setupModels(const GLuint vpUBO);
 /*
  * Setup the depth buffer for the shadow map pass and return the texture
  * and framebuffer in the params passed. The texture will be active in
@@ -84,20 +86,28 @@ int main(int argc, char **argv){
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
-	
-	glm::mat4 projection = glm::perspective(75.f,
-		WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
+	//Get our projection and view matrices setup along with the inverses and the UBO
+	//View is @ 0, proj is @ 1, the inverses are at idx + 2
+	glm::mat4 viewProjMats[4];
 	glm::vec4 viewPos(0.f, 6.f, 6.f, 1.f);
-	glm::mat4 view = glm::lookAt(glm::vec3(viewPos), glm::vec3(0.f, 0.f, 0.f),
+	viewProjMats[0] = glm::lookAt(glm::vec3(viewPos), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
+	viewProjMats[1] = glm::perspective(75.f, WIN_WIDTH / static_cast<float>(WIN_HEIGHT), 1.f, 100.f);
+	viewProjMats[2] = glm::inverse(viewProjMats[0]);
+	viewProjMats[3] = glm::inverse(viewProjMats[1]);
 
-	std::vector<Model*> models = setupModels(view, projection);
+	GLuint viewProjUBO;
+	glGenBuffers(1, &viewProjUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, viewProjUBO);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * 4, &viewProjMats[0], GL_STATIC_DRAW);
+
+	std::vector<Model*> models = setupModels(viewProjUBO);
 
 	//The light direction and half vector
 	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
 	//Setup the light's view & projection matrix for the light
 	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 40.f, glm::vec3(0.f, 0.f, 0.f),
-		glm::vec3(0.f, 1.f, 0.f));
+		glm::normalize(glm::vec3(-1.f, 1.f, -1.f)));
 	//For a directional light orthographic projection (point use perspective)
 	glm::mat4 lightVP = glm::ortho(-8.f, 8.f, -8.f, 8.f, 1.f, 100.f) * lightView;
 
@@ -151,12 +161,9 @@ int main(int argc, char **argv){
 	glUniform1i(normalUnif, 1);
 	glUniform1i(depthUnif, 2);
 
-	GLuint invProjUnif = glGetUniformLocation(quadProg, "inv_proj");
-	GLuint invViewUnif = glGetUniformLocation(quadProg, "inv_view");
-	glm::mat4 invProj = glm::inverse(projection);
-	glm::mat4 invView = glm::inverse(view);
-	glUniformMatrix4fv(invProjUnif, 1, GL_FALSE, glm::value_ptr(invProj));
-	glUniformMatrix4fv(invViewUnif, 1, GL_FALSE, glm::value_ptr(invView));
+	//Pass in view proj uniform block
+	GLuint vpBlockIdx = glGetUniformBlockIndex(quadProg, "ViewProj");
+	glBindBufferBase(GL_UNIFORM_BUFFER, vpBlockIdx, viewProjUBO);
 
 	//Pass them to the first pass shader for a forward lighting test
 	GLuint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
@@ -286,6 +293,7 @@ int main(int argc, char **argv){
 			std::cout << "frame time: " << frameTime << "ms\n";
 		}
 	}
+	glDeleteBuffers(1, &viewProjUBO);
 	glDeleteBuffers(1, &modelMatBuf);
 
 	glDeleteFramebuffers(1, &shadowFbo);
@@ -299,7 +307,7 @@ int main(int argc, char **argv){
 
 	return 0;
 }
-std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
+std::vector<Model*> setupModels(const GLuint vpUBO){
 	std::vector<Model*> models;
 	GLint progStatus = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");
 	if (progStatus == -1){
@@ -315,11 +323,9 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glBindTexture(GL_TEXTURE_2D, texture);
 	GLuint texUnif = glGetUniformLocation(program, "tex_diffuse");
 	glUniform1i(texUnif, 4);
-	//Pass the view/projection matrices
-	GLint projUnif = glGetUniformLocation(program, "proj");
-	GLint viewUnif = glGetUniformLocation(program, "view");
-	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
-	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
+	//Set the view/proj uniform block
+	GLuint vpBlockIdx = glGetUniformBlockIndex(program, "ViewProj");
+	glBindBufferBase(GL_UNIFORM_BUFFER, vpBlockIdx, vpUBO);
 
 	GLuint shadowProgram = util::loadProgram("res/vshadow_instanced.glsl", "res/fshadow.glsl");
 	//With suzanne the self-shadowing is much easier to see
@@ -342,11 +348,9 @@ std::vector<Model*> setupModels(const glm::mat4 &view, const glm::mat4 &proj){
 	glBindTexture(GL_TEXTURE_2D, texture);
 	texUnif = glGetUniformLocation(program, "tex_diffuse");
 	glUniform1i(texUnif, 5);
-	
-	projUnif = glGetUniformLocation(program, "proj");
-	viewUnif = glGetUniformLocation(program, "view");
-	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
-	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(view));
+
+	vpBlockIdx = glGetUniformBlockIndex(program, "ViewProj");
+	glBindBufferBase(GL_UNIFORM_BUFFER, vpBlockIdx, vpUBO);
 
 	shadowProgram = util::loadProgram("res/vshadow.glsl", "res/fshadow.glsl");
 	Model *floor = new Model("res/quad.obj", program, shadowProgram);
