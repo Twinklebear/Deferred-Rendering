@@ -20,7 +20,8 @@ const int WIN_HEIGHT = 480;
 /*
  * Load up the models being drawn in the scene and return them in the vector passed
  * Will set the models to use the uniform block containing the view and projection
- * matrices to the uniform buffer passed in
+ * matrices to the uniform buffer passed in. Also setup to use the passed in ubo
+ * to provide the shadow shaders with the light's model/proj/view matrices. Super hacked in atm
  * TODO: Setup proper ref-counting for GL objects so I don't need to return a pointer
  * The view and proj matrices are the viewing and projection matrices for the scene
  * Texture units 0-2 are reserved for the deferred pass and 3 is used by the shadow map
@@ -29,7 +30,7 @@ const int WIN_HEIGHT = 480;
  * not a big deal now, but should make a wrapper around Texture2D that can be
  * associated with a Model or something
  */
-std::vector<Model*> setupModels(const GLuint vpUBO);
+std::vector<Model*> setupModels(const GLuint vpUBO, const GLuint lightUbo);
 /*
  * Setup the depth buffer for the shadow map pass and return the texture
  * and framebuffer in the params passed. The texture will be active in
@@ -47,7 +48,7 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #ifdef DEBUG
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -74,6 +75,7 @@ int main(int argc, char **argv){
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClearDepth(1.f);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
@@ -101,15 +103,28 @@ int main(int argc, char **argv){
 	glBindBuffer(GL_UNIFORM_BUFFER, viewProjUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4) * 4, &viewProjMats[0], GL_STATIC_DRAW);
 
-	std::vector<Model*> models = setupModels(viewProjUBO);
+	//Center the light at the origin
+	glm::vec3 lightPos(0.f, 1.f, -0.5);
+	//Since the light is at the origin the matrix to translate it there is identity heh
+	glm::mat4 lightMats[8];
+	lightMats[0] = glm::translate<GLfloat>(-lightPos);
+	lightMats[1] = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
+	//Setup the different view matrices for each cube face
+	glm::vec3 origin(0.f, 0.f, 0.f);
+	//Why do the up directions get flipped?
+	lightMats[2] = glm::lookAt<GLfloat>(origin, glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
+	lightMats[3] = glm::lookAt<GLfloat>(origin, glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
+	lightMats[4] = glm::lookAt<GLfloat>(origin, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+	lightMats[5] = glm::lookAt<GLfloat>(origin, glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+	lightMats[6] = glm::lookAt<GLfloat>(origin, glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f));
+	lightMats[7] = glm::lookAt<GLfloat>(origin, glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f));
 
-	//The light direction and half vector
-	glm::vec4 lightDir = glm::normalize(glm::vec4(1.f, 1.f, 1.f, 0.f));
-	//Setup the light's view & projection matrix for the light
-	glm::mat4 lightView = glm::lookAt(glm::vec3(lightDir) * 40.f, glm::vec3(0.f, 0.f, 0.f),
-		glm::normalize(glm::vec3(-1.f, 1.f, -1.f)));
-	//For a directional light orthographic projection (point use perspective)
-	glm::mat4 lightVP = glm::ortho(-8.f, 8.f, -8.f, 8.f, 1.f, 100.f) * lightView;
+	//Setup buffer to hold the PointLight information
+	GLuint pointLightUbo;
+	glGenBuffers(1, &pointLightUbo);
+	glBufferData(GL_UNIFORM_BUFFER, 8 * sizeof(glm::mat4), lightMats, GL_STATIC_DRAW);
+
+	std::vector<Model*> models = setupModels(viewProjUBO, pointLightUbo);
 
 	//Setup our render targets
 	GLuint fbo;
@@ -166,16 +181,17 @@ int main(int argc, char **argv){
 	glBindBufferBase(GL_UNIFORM_BUFFER, vpBlockIdx, viewProjUBO);
 
 	//Pass them to the first pass shader for a forward lighting test
+/*
 	GLuint lightDirUnif = glGetUniformLocation(quadProg, "light_dir");
 	GLuint viewPosUnif = glGetUniformLocation(quadProg, "view_pos");
 	glUniform4fv(lightDirUnif, 1, glm::value_ptr(lightDir));
 	glUniform4fv(viewPosUnif, 1, glm::value_ptr(viewPos));
-
+*/
 	//Shadow map is bound to texture unit 3
 	GLuint shadowMapUnif = glGetUniformLocation(quadProg, "shadow_map");
 	glUniform1i(shadowMapUnif, 3);
-	GLuint lightVPUnif = glGetUniformLocation(quadProg, "light_vp");
-	glUniformMatrix4fv(lightVPUnif, 1, GL_FALSE, glm::value_ptr(lightVP));
+	//GLuint lightVPUnif = glGetUniformLocation(quadProg, "light_vp");
+	//glUniformMatrix4fv(lightVPUnif, 1, GL_FALSE, glm::value_ptr(lightVP));
 
 	//We render the second pass onto a quad drawn to the NDC
 	Model quad("res/quad.obj", quadProg);
@@ -183,18 +199,6 @@ int main(int argc, char **argv){
 	//Setup the shadow map
 	GLuint shadowTex, shadowFbo;
 	setupShadowMap(shadowFbo, shadowTex);
-	for (Model *m : models){
-		m->setShadowVP(lightVP);
-	}
-	
-	//Setup a debug output quad to be drawn to NDC after all other rendering
-	GLuint dbgProgram = util::loadProgram("res/vforward.glsl", "res/fforward_lum.glsl");
-	Model dbgOut("res/quad.obj", dbgProgram);
-	dbgOut.scale(glm::vec3(0.3f, 0.3f, 1.f));
-	dbgOut.translate(glm::vec3(-0.7f, 0.7f, 0.f));
-	glUseProgram(dbgProgram);
-	GLuint dbgTex = glGetUniformLocation(dbgProgram, "tex");
-	glUniform1i(dbgTex, 3);
 
 	//For instanced rendering: Bind the cube and slip our model matrix buffer into the VAO as
 	//attribute 3
@@ -248,9 +252,10 @@ int main(int argc, char **argv){
 				}
 			}
 		}
+		//For testing just do the shadow map pass
 		//Shadow map pass
 		renderShadowMap(shadowFbo, models, numInstances);
-
+/*
 		//First pass
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -270,19 +275,8 @@ int main(int argc, char **argv){
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		quad.bind();
 		glDrawElements(GL_TRIANGLES, quad.elems(), GL_UNSIGNED_SHORT, 0);
-
+*/
 		util::logGLError("post second pass");
-
-		//Draw debug texture
-		glDisable(GL_DEPTH_TEST);
-		//Unset the compare mode so that we can draw it properly
-		glActiveTexture(GL_TEXTURE3);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-		dbgOut.bind();
-		glDrawElements(GL_TRIANGLES, dbgOut.elems(), GL_UNSIGNED_SHORT, 0);
-		//Set it back to the shadow map compare mode
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glEnable(GL_DEPTH_TEST);
 
 		SDL_GL_SwapWindow(win);
 		int end = SDL_GetTicks();
@@ -307,7 +301,7 @@ int main(int argc, char **argv){
 
 	return 0;
 }
-std::vector<Model*> setupModels(const GLuint vpUBO){
+std::vector<Model*> setupModels(const GLuint vpUBO, const GLuint lightUbo){
 	std::vector<Model*> models;
 	GLint progStatus = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");
 	if (progStatus == -1){
@@ -327,7 +321,12 @@ std::vector<Model*> setupModels(const GLuint vpUBO){
 	GLuint vpBlockIdx = glGetUniformBlockIndex(program, "ViewProj");
 	glBindBufferBase(GL_UNIFORM_BUFFER, vpBlockIdx, vpUBO);
 
-	GLuint shadowProgram = util::loadProgram("res/vshadow_instanced.glsl", "res/fshadow.glsl");
+	GLuint shadowProgram = util::loadProgram("res/vshadow_point_instanced.glsl", "res/fshadow.glsl",
+		"res/gshadow_instanced.glsl");
+	glUseProgram(shadowProgram);
+	GLuint lightBlockIdx = glGetUniformBlockIndex(shadowProgram, "PointLight");
+	std::cout << "Light block idx in shadow program: " << lightBlockIdx << "\n";
+	glBindBufferBase(GL_UNIFORM_BUFFER, lightBlockIdx, lightUbo);
 	//With suzanne the self-shadowing is much easier to see
 	Model *polyhedron = new Model("res/suzanne.obj", program, shadowProgram);
 	models.push_back(polyhedron);
@@ -364,26 +363,23 @@ std::vector<Model*> setupModels(const GLuint vpUBO){
 void setupShadowMap(GLuint &fbo, GLuint &tex){
 	glActiveTexture(GL_TEXTURE3);
 	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	//Will just use a shadow map equal to the window dimensions
-	//Must use specific formats for depth_stencil attachment
-	//Mesa refuses to accept this type/format combination, what is valid?
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F,
-		WIN_WIDTH, WIN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+	//Setup each face of the cube
+	for (int i = 0; i < 6; ++i){
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F,
+			512, 512, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	}
 	//No mip maps
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	//Setup depth comparison mode
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE,	GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	//Don't wrap edges
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, tex, 0);
 	glDrawBuffer(GL_NONE);
 
 	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -424,13 +420,12 @@ void renderShadowMap(GLuint &fbo, const std::vector<Model*> &models, const int n
 	//Polygon offset fill helps resolve depth-fighting
 	glEnable(GL_POLYGON_OFFSET_FILL);
 	glPolygonOffset(2.f, 4.f);
-	//Only draw the instanced foreground cubes
+	//Only draw the instanced foreground objects
 	models.at(0)->bindShadow();
 	glDrawElementsInstanced(GL_TRIANGLES, models.at(0)->elems(), GL_UNSIGNED_SHORT,
 		NULL, numInstances);
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 }
 

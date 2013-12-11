@@ -42,6 +42,9 @@ GLint util::loadShader(const std::string &file, GLenum type){
 		case GL_FRAGMENT_SHADER:
 			std::cerr << "Fragment shader: ";
 			break;
+		case GL_GEOMETRY_SHADER:
+			std::cerr << "Geometry shader: ";
+			break;
 		default:
 			std::cerr << "Unknown shader type: ";
 		}
@@ -58,16 +61,25 @@ GLint util::loadShader(const std::string &file, GLenum type){
 	}
 	return shader;
 }
-GLint util::loadProgram(const std::string &vertfname, const std::string &fragfname){
+GLint util::loadProgram(const std::string &vertfname, const std::string &fragfname,
+	const std::string &geomfname)
+{
 	GLint vShader = loadShader(vertfname, GL_VERTEX_SHADER);
 	GLint fShader = loadShader(fragfname, GL_FRAGMENT_SHADER);
-	if (vShader == -1 || fShader == -1){
+	GLint gShader = -2;
+	if (!geomfname.empty()){
+		gShader = loadShader(geomfname, GL_GEOMETRY_SHADER);
+	}
+	if (vShader == -1 || fShader == -1 || gShader == -1){
 		std::cerr << "Program creation failed, a required shader failed to compile\n";
 		return -1;
 	}
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vShader);
 	glAttachShader(program, fShader);
+	if (gShader != -2){
+		glAttachShader(program, gShader);
+	}
 	glLinkProgram(program);
 
 	GLint status;
@@ -85,6 +97,10 @@ GLint util::loadProgram(const std::string &vertfname, const std::string &fragfna
 	glDetachShader(program, fShader);
 	glDeleteShader(vShader);
 	glDeleteShader(fShader);
+	if (gShader != -2){
+		glDetachShader(program, gShader);
+		glDeleteShader(gShader);
+	}
 	if (status == GL_FALSE){
 		glDeleteProgram(program);
 		return -1;

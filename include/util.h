@@ -23,11 +23,12 @@ namespace util {
 	 */
 	GLint loadShader(const std::string &file, GLenum type);
 	/*
-	 * Load a simple shader program using the vertex and fragment
-	 * shaders in the files passed
+	 * Load a simple shader program using the vertex, fragment and optionally
+	 * geometry shaders from the files
 	 * returns -1 if loading failed
 	 */
-	GLint loadProgram(const std::string &vertfname, const std::string &fragfname);
+	GLint loadProgram(const std::string &vertfname, const std::string &fragfname,
+		const std::string &geomfname = "");
 	/*
 	 * Load an image into an OpenGL texture. SDL is used to read the image into
 	 * a surface which is then passed to OpenGL. A new texture id is created
