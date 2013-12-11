@@ -1,6 +1,6 @@
 #version 330
 
-//A simple shader for rendering shadow maps
+//A simple shader for rendering shadow maps for instanced geometry
 
 uniform mat4 view_proj;
 
