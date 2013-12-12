@@ -17,6 +17,12 @@
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
 
+const GLfloat triangle[] = {
+	0.f, 0.f, 0.f,
+	1.f, 0.f, 0.f,
+	1.f, 1.f, 0.f
+};
+
 //Check a framebuffer's status, returns true if ok
 bool checkFrameBuffer(GLuint fbo);
 
@@ -68,22 +74,18 @@ int main(int argc, char **argv){
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
-	//The model's vao, vbo and ebo
-	GLuint model[3];
-	glGenVertexArrays(1, &model[0]);
-	glBindVertexArray(model[0]);
-	glGenBuffers(2, &model[1]);
-	size_t modelElems;
-	if (!util::loadOBJ("res/suzanne.obj", model[1], model[2], modelElems)){
-		std::cerr << "Failed loading model\n";
-		return 1;
-	}
+	GLuint vao, vbo;
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &vbo);
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(GLfloat), triangle, GL_STATIC_DRAW);
 	//All we care about is position for this test, since doing flat shading
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GL_FLOAT), 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	//Load and setup the program with the model, layered view matrices and project matrix
-	glm::mat4 modelMat = glm::translate<GLfloat>(0.f, 0.f, 0.f);
+	glm::mat4 modelMat = glm::translate<GLfloat>(-1.5f, 0.f, 0.f) * glm::scale<GLfloat>(3.f, 3.f, 1.f);
 	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
 	glm::mat4 views[2];
 	views[0] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
@@ -133,15 +135,15 @@ int main(int argc, char **argv){
 			}
 		}
 		glClear(GL_COLOR_BUFFER_BIT);
-		glDrawElements(GL_TRIANGLES, modelElems, GL_UNSIGNED_SHORT, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 		if (util::logGLError("Post-draw")){
 				return 1;
 		}
 
 		SDL_GL_SwapWindow(win);
 	}
-	glDeleteVertexArrays(1, &model[0]);
-	glDeleteBuffers(2, &model[1]);
+	glDeleteVertexArrays(1, &vao);
+	glDeleteBuffers(1, &vbo);
 	glDeleteProgram(program);
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(1, &tex);
