@@ -1,7 +1,6 @@
 #version 330
 
 //Simple pass-through fragment shadow for shadow map rendering
-
 out vec4 color;
 
 void main(void){

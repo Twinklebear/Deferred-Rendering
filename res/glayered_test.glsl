@@ -1,4 +1,4 @@
-#version 430
+#version 330
 
 /*
  * Geometry shader for generating geometry for rendering to each face of
@@ -10,23 +10,21 @@
  * I suppose to do this for GL 3.3 I'd have to do it w/o geometry shader instancing somehow.
  */
 
-layout(triangles, invocations=6) in;
-layout(triangle_strip, max_vertices=3) out;
+layout(triangles) in;
+layout(triangle_strip, max_vertices=6) out;
 
-layout(std140) uniform PointLight {
-	//Matrix to translate point light to origin
-	mat4 model;
-	mat4 proj;
-	//The viewing matrices for pos/neg x/y/z faces
-	mat4 view[6];
-} GS_PointLight;
+//The views for the layers and the perspective proj. matrix
+uniform mat4 view;
+uniform mat4 proj;
 
 void main(void){
-	for (int i = 0; i < gl_in.length(); ++i){
-		gl_Layer = gl_InvocationID;
-		gl_Position = GS_PointLight.proj * GS_PointLight.view[gl_InvocationID] * gl_in[i].gl_Position;
-		EmitVertex();
+	for (int i = 0; i < 2; ++i){
+		for (int j = 0; j < gl_in.length(); ++j){
+			gl_Layer = i;
+			gl_Position = proj * view * gl_in[j].gl_Position;
+			EmitVertex();
+		}
+		EndPrimitive();
 	}
-	EndPrimitive();
 }
 
