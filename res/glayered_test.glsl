@@ -11,7 +11,7 @@
  */
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices=6) out;
+layout(triangle_strip, max_vertices = 6) out;
 
 //The views for the layers and the perspective proj. matrix
 uniform mat4 view;

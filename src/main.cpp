@@ -98,12 +98,18 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(modelUnif, 1, GL_FALSE, glm::value_ptr(modelMat));
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	glUniformMatrix4fv(viewsUnif, 1, GL_FALSE, glm::value_ptr(views[0]));
+	if (util::logGLError("Set uniforms")){
+		return 1;
+	}
 
 	//Setup the layered rendering target w/ 2 layers
 	GLuint tex;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, 512, 512, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	if (util::logGLError("setup texture array")){
+		return 1;
+	}
 
 	GLuint fbo;
 	glGenFramebuffers(1, &fbo);
@@ -111,6 +117,7 @@ int main(int argc, char **argv){
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
 	const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers(1, drawBuffers);
+
 	if (!checkFrameBuffer(fbo)){
 		std::cerr << "FBO error!\n";
 		return 1;
@@ -126,6 +133,9 @@ int main(int argc, char **argv){
 		}
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDrawElements(GL_TRIANGLES, modelElems, GL_UNSIGNED_SHORT, 0);
+		if (util::logGLError("Post-draw")){
+				return 1;
+		}
 
 		SDL_GL_SwapWindow(win);
 	}
