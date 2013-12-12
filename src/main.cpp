@@ -90,7 +90,7 @@ int main(int argc, char **argv){
 	views[1] = glm::lookAt<GLfloat>(glm::vec3(4.f, 0.f, 0.f),
 		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 
-	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshadow.glsl", "res/glayered_test.glsl");
+	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
 	glUseProgram(program);
 	GLuint modelUnif = glGetUniformLocation(program, "model");
 	GLuint projUnif = glGetUniformLocation(program, "proj");
