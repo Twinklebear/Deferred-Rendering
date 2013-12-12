@@ -55,6 +55,7 @@ int main(int argc, char **argv){
 	util::logGLError("Post GLEW init");
 
 	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glDisable(GL_DEPTH_TEST);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
@@ -105,6 +106,7 @@ int main(int argc, char **argv){
 	//Setup the layered rendering target w/ 2 layers
 	GLuint tex;
 	glGenTextures(1, &tex);
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, 512, 512, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	if (util::logGLError("setup texture array")){
@@ -117,7 +119,6 @@ int main(int argc, char **argv){
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
 	const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers(1, drawBuffers);
-
 	if (!checkFrameBuffer(fbo)){
 		std::cerr << "FBO error!\n";
 		return 1;
@@ -154,28 +155,28 @@ bool checkFrameBuffer(GLuint fbo){
 	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	switch (fboStatus){
 	case GL_FRAMEBUFFER_UNDEFINED:
-			std::cout << "Shadow FBO incomplete: undefined\n";
+			std::cout << "FBO incomplete: undefined\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			std::cout << "Shadow FBO incomplete: attachment\n";
+			std::cout << "FBO incomplete: attachment\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-			std::cout << "Shadow FBO incomplete: missing attachment\n";
+			std::cout << "FBO incomplete: missing attachment\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-			std::cout << "Shadow FBO incomplete: draw buffer\n";
+			std::cout << "FBO incomplete: draw buffer\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-			std::cout << "Shadow FBO incomplete: read buffer\n";
+			std::cout << "FBO incomplete: read buffer\n";
 			return false;
 	case GL_FRAMEBUFFER_UNSUPPORTED:
-			std::cout << "Shadow FBO incomplete: unsupported\n";
+			std::cout << "FBO incomplete: unsupported\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-			std::cout << "Shadow FBO incomplete: multisample\n";
+			std::cout << "FBO incomplete: multisample\n";
 			return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-			std::cout << "Shadow FBO incomplete: layer targets\n";
+			std::cout << "FBO incomplete: layer targets\n";
 			return false;
 	default:
 			break;
