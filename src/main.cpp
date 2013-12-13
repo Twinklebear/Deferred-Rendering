@@ -101,7 +101,9 @@ int main(int argc, char **argv){
 	GLuint viewsUnif = glGetUniformLocation(program, "view");
 	glUniformMatrix4fv(modelUnif, 1, GL_FALSE, glm::value_ptr(modelMat));
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
-	glUniformMatrix4fv(viewsUnif, 1, GL_FALSE, glm::value_ptr(views[0]));
+	//Better way to do this properly? UBO? Unpacking the matrices would be a real pain and
+	//i think glm is supposed to interop transparently w/GL
+	glUniformMatrix4fv(viewsUnif, 2, GL_FALSE, (GLfloat*)(views));
 	if (util::logGLError("Set uniforms")){
 		return 1;
 	}
@@ -122,7 +124,7 @@ int main(int argc, char **argv){
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
 	const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers(1, drawBuffers);
-	if (!checkFrameBuffer(fbo)){
+	if (!checkFrameBuffer(fbo) || util::logGLError("setup fbo")){
 		std::cerr << "FBO error!\n";
 		return 1;
 	}
