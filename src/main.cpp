@@ -146,9 +146,10 @@ int main(int argc, char **argv){
 				quit = true;
 			}
 		}
-		//Clear is supposed to clear all layers but doesn't!
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		if (util::logGLError("Post-draw")){
 				return 1;
