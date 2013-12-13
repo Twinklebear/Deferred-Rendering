@@ -88,10 +88,11 @@ int main(int argc, char **argv){
 	glm::mat4 modelMat = glm::translate<GLfloat>(-1.5f, 0.f, 0.f) * glm::scale<GLfloat>(3.f, 3.f, 1.f);
 	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
 	glm::mat4 views[2];
+	//Right side up and up-side down viewing matrices
 	views[0] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
 		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-	views[1] = glm::lookAt<GLfloat>(glm::vec3(4.f, 0.f, 0.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+	views[1] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
 
 	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
 	glUseProgram(program);
@@ -137,6 +138,7 @@ int main(int argc, char **argv){
 		}
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
 		if (util::logGLError("Post-draw")){
 				return 1;
 		}

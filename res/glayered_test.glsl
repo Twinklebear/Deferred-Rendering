@@ -20,11 +20,11 @@ uniform mat4 proj;
 flat out int layer;
 
 void main(void){
-	for (int i = 0; i < 2; ++i){
-		for (int j = 0; j < gl_in.length(); ++j){
-			gl_Layer = i;
-			layer = i;
-			gl_Position = proj * view * gl_in[j].gl_Position;
+	for (int l = 0; l < 2; ++l){
+		for (int i = 0; i < gl_in.length(); ++i){
+			gl_Layer = l;
+			layer = l;
+			gl_Position = proj * view * gl_in[i].gl_Position;
 			EmitVertex();
 		}
 		EndPrimitive();
