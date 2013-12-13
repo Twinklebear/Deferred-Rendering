@@ -128,8 +128,16 @@ int main(int argc, char **argv){
 		std::cerr << "FBO error!\n";
 		return 1;
 	}
-	glViewport(0, 0, 512, 512);
+	//Query if it's really a layered attachmnet
+	GLint isLayered = GL_FALSE;
+	glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_FRAMEBUFFER_ATTACHMENT_LAYERED, &isLayered);
+	if (isLayered == GL_FALSE){
+		std::cout << "Attachment is not layered somehow?\n";
+		return 1;
+	}
 
+	glViewport(0, 0, 512, 512);
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
@@ -138,6 +146,7 @@ int main(int argc, char **argv){
 				quit = true;
 			}
 		}
+		//Clear is supposed to clear all layers but doesn't!
 		glClear(GL_COLOR_BUFFER_BIT);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -162,29 +171,32 @@ bool checkFrameBuffer(GLuint fbo){
 	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	switch (fboStatus){
 	case GL_FRAMEBUFFER_UNDEFINED:
-			std::cout << "FBO incomplete: undefined\n";
-			return false;
+		std::cout << "FBO incomplete: undefined\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			std::cout << "FBO incomplete: attachment\n";
-			return false;
+		std::cout << "FBO incomplete: attachment\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-			std::cout << "FBO incomplete: missing attachment\n";
-			return false;
+		std::cout << "FBO incomplete: missing attachment\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-			std::cout << "FBO incomplete: draw buffer\n";
-			return false;
+		std::cout << "FBO incomplete: draw buffer\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-			std::cout << "FBO incomplete: read buffer\n";
-			return false;
+		std::cout << "FBO incomplete: read buffer\n";
+		return false;
 	case GL_FRAMEBUFFER_UNSUPPORTED:
-			std::cout << "FBO incomplete: unsupported\n";
-			return false;
+		std::cout << "FBO incomplete: unsupported\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-			std::cout << "FBO incomplete: multisample\n";
-			return false;
+		std::cout << "FBO incomplete: multisample\n";
+		return false;
 	case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-			std::cout << "FBO incomplete: layer targets\n";
-			return false;
+		std::cout << "FBO incomplete: layer targets\n";
+		return false;
+	case GL_FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_ARB:
+		std::cout << "FBO incomplete: layer count\n";
+		return false;
 	default:
 			break;
 	}

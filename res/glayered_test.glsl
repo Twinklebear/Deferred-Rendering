@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 /*
  * Geometry shader for generating geometry for rendering to each face of

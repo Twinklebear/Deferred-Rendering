@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 //Selects the color for the fragment based on its layer.
 const vec4 layer_colors[2] = vec4[](
