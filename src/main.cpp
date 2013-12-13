@@ -125,6 +125,7 @@ int main(int argc, char **argv){
 		std::cerr << "FBO error!\n";
 		return 1;
 	}
+	glViewport(0, 0, 512, 512);
 
 	SDL_Event e;
 	bool quit = false;
