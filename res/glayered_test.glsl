@@ -11,20 +11,20 @@
  */
 
 layout(triangles) in;
-layout(triangle_strip, max_vertices = 6) out;
+layout(triangle_strip, max_vertices = 18) out;
 
 //The views for the layers and the perspective proj. matrix
-uniform mat4 view[2];
+uniform mat4 view;
 uniform mat4 proj;
 
 flat out int layer;
 
 void main(void){
-	for (int l = 0; l < 2; ++l){
+	for (int l = 0; l < 6; ++l){
 		for (int i = 0; i < gl_in.length(); ++i){
 			gl_Layer = l;
 			layer = l;
-			gl_Position = proj * view[l] * gl_in[i].gl_Position;
+			gl_Position = proj * view * gl_in[i].gl_Position;
 			EmitVertex();
 		}
 		EndPrimitive();

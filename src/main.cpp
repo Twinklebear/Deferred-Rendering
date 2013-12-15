@@ -16,11 +16,33 @@
 
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
+const int VAO = 0;
+const int VBO = 1;
 
 const GLfloat triangle[] = {
 	0.f, 0.f, 0.f,
 	1.f, 0.f, 0.f,
 	1.f, 1.f, 0.f
+};
+//Positions of vertices for a quad
+const GLfloat quadVerts[18] = {
+	//positions
+	-1, -1, 0,
+	1, -1, 0,
+	1, 1, 0,
+	-1, -1, 0,
+	1, 1, 0,
+	-1, 1, 0
+};
+//Cube-map texcoords for the quad, for each face of the cubemap
+//face names are in gl order: pos_x, neg_x, pos_y, neg_y, pos_z, neg_z
+const GLfloat cubeMapUV[6][18] = {
+	{ 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, 1, -1, -1, 1, -1, 1 },
+	{ -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1 },
+	{ -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1 },
+	{ -1, -1, 1, 1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, -1 },
+	{ -1, 1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1 },
+	{ 1, 1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, -1, -1, -1, 1, -1, -1 }
 };
 
 //Check a framebuffer's status, returns true if ok
@@ -45,9 +67,7 @@ int main(int argc, char **argv){
 	SDL_Window *win = SDL_CreateWindow("Layered Renderering",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIN_WIDTH, WIN_HEIGHT,
 		SDL_WINDOW_OPENGL);
-	
 	SDL_GLContext context = SDL_GL_CreateContext(win);
-
 	util::logGLError("Post SDL init");
 
 	glewExperimental = GL_TRUE;
@@ -62,6 +82,7 @@ int main(int argc, char **argv){
 
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
@@ -103,18 +124,23 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	//Better way to do this properly? UBO? Unpacking the matrices would be a real pain and
 	//i think glm is supposed to interop transparently w/GL
-	glUniformMatrix4fv(viewsUnif, 2, GL_FALSE, (GLfloat*)(views));
+	glUniformMatrix4fv(viewsUnif, 1, GL_FALSE, glm::value_ptr(views[0]));
 	if (util::logGLError("Set uniforms")){
 		return 1;
 	}
-
-	//Setup the layered rendering target w/ 2 layers
+	//Setup the cube map rendering target
 	GLuint tex;
 	glGenTextures(1, &tex);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, 512, 512, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	if (util::logGLError("setup texture array")){
+	glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	for (int i = 0; i < 6; ++i){
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, 512, 512, 0,
+			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+	if (util::logGLError("setup texture")){
 		return 1;
 	}
 
@@ -122,8 +148,7 @@ int main(int argc, char **argv){
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
-	const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
-	glDrawBuffers(1, drawBuffers);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	if (!checkFrameBuffer(fbo) || util::logGLError("setup fbo")){
 		std::cerr << "FBO error!\n";
 		return 1;
@@ -133,33 +158,97 @@ int main(int argc, char **argv){
 	glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 		GL_FRAMEBUFFER_ATTACHMENT_LAYERED, &isLayered);
 	if (isLayered == GL_FALSE){
-		std::cout << "Attachment is not layered somehow?\n";
+		std::cout << "Attachment is not layered?\n";
 		return 1;
 	}
 
-	glViewport(0, 0, 512, 512);
+	//Setup a debug output quad
+	GLuint quad[2];
+	glGenVertexArrays(1, &quad[VAO]);
+	glGenBuffers(1, &quad[VBO]);
+	glBindVertexArray(quad[VAO]);
+	glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
+	//Room for the quads positions and cube map tex coords
+	glBufferData(GL_ARRAY_BUFFER, 36 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
+	//Write the position data
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 18 * sizeof(GLfloat), quadVerts);
+	//Initially we'll draw +X face
+	glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[0]);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)(18 * sizeof(GLfloat)));
+	GLuint quadProg = util::loadProgram("res/vdbg.glsl", "res/fdbg.glsl");
+	//For tracking which cube face to render
+	int face = 0;
+	bool changeFace = false;
+
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
 		while (SDL_PollEvent(&e)){
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
-				quit = true;
+			if (e.type == SDL_KEYDOWN){
+				switch (e.key.keysym.sym){
+				case SDLK_ESCAPE:
+					quit = true;
+					break;
+				case SDLK_1:
+					face = 0;
+					changeFace = true;
+					break;
+				case SDLK_2:
+					face = 1;
+					changeFace = true;
+					break;
+				case SDLK_3:
+					face = 2;
+					changeFace = true;
+					break;
+				case SDLK_4:
+					face = 3;
+					changeFace = true;
+					break;
+				case SDLK_5:
+					face = 4;
+					changeFace = true;
+					break;
+				case SDLK_6:
+					face = 5;
+					changeFace = true;
+					break;
+				default:
+					break;
+				}
 			}
 		}
+		if (changeFace){
+			glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
+			glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[face]);
+		}
+		glViewport(0, 0, 512, 512);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
+		glUseProgram(program);
+		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		glViewport(0, 0, 640, 480);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glUseProgram(quadProg);
+		glBindVertexArray(quad[VAO]);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		if (util::logGLError("Post-draw")){
 				return 1;
 		}
-
 		SDL_GL_SwapWindow(win);
 	}
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
+	glDeleteVertexArrays(1, &quad[VAO]);
+	glDeleteBuffers(1, &quad[VBO]);
 	glDeleteProgram(program);
+	glDeleteProgram(quadProg);
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(1, &tex);
 	SDL_GL_DeleteContext(context);
