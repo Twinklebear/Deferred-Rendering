@@ -95,18 +95,7 @@ int main(int argc, char **argv){
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
-	GLuint vao, vbo;
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
-	glBindVertexArray(vao);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(GLfloat), triangle, GL_STATIC_DRAW);
-	//All we care about is position for this test, since doing flat shading
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	//Load and setup the program with the model, layered view matrices and project matrix
-	glm::mat4 modelMat = glm::translate<GLfloat>(-1.5f, 0.f, 0.f) * glm::scale<GLfloat>(3.f, 3.f, 1.f);
+	//Load and setup the program with layered view matrices and a single projection matrix
 	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
 	glm::mat4 views[2];
 	//Right side up and up-side down viewing matrices
@@ -117,10 +106,8 @@ int main(int argc, char **argv){
 
 	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
 	glUseProgram(program);
-	GLuint modelUnif = glGetUniformLocation(program, "model");
 	GLuint projUnif = glGetUniformLocation(program, "proj");
 	GLuint viewsUnif = glGetUniformLocation(program, "view");
-	glUniformMatrix4fv(modelUnif, 1, GL_FALSE, glm::value_ptr(modelMat));
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	//Better way to do this properly? UBO? Unpacking the matrices would be a real pain and
 	//i think glm is supposed to interop transparently w/GL
@@ -128,6 +115,12 @@ int main(int argc, char **argv){
 	if (util::logGLError("Set uniforms")){
 		return 1;
 	}
+	Model model("res/suzanne.obj", program);
+	model.scale(glm::vec3(3.f, 3.f, 1.f));
+	if (util::logGLError("Setup model")){
+		return 1;
+	}
+
 	//Setup the cube map rendering target
 	GLuint tex;
 	glGenTextures(1, &tex);
@@ -225,12 +218,12 @@ int main(int argc, char **argv){
 			glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
 			glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[face]);
 		}
+
 		glViewport(0, 0, 512, 512);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(program);
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		model.bind();
+		glDrawElements(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, 0);
 
 		glViewport(0, 0, 640, 480);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -238,16 +231,14 @@ int main(int argc, char **argv){
 		glUseProgram(quadProg);
 		glBindVertexArray(quad[VAO]);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
 		if (util::logGLError("Post-draw")){
 				return 1;
 		}
 		SDL_GL_SwapWindow(win);
 	}
-	glDeleteVertexArrays(1, &vao);
-	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &quad[VAO]);
 	glDeleteBuffers(1, &quad[VBO]);
-	glDeleteProgram(program);
 	glDeleteProgram(quadProg);
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(1, &tex);
