@@ -2,12 +2,8 @@
 
 /*
  * Geometry shader for generating geometry for rendering to each face of
- * a cube map for shadow mapping. Shader is invoked per face and emits the primitive
- * transformed with the faces view/projection matrix. Incoming geometry should be
- * in world space with the point light at the origin. The instance id is the face to write
- * to using the same indices that OpenGL uses (ie. 0 = pos x, 1 = neg x, etc)
+ * a cube map, emits the primitive transformed with the face's view/projection matrix.
  * Perhaps later do some culling and only emit triangles that are visible to that face?
- * I suppose to do this for GL 3.3 I'd have to do it w/o geometry shader instancing somehow.
  */
 
 layout(triangles) in;
