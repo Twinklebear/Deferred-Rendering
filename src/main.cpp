@@ -81,7 +81,8 @@ int main(int argc, char **argv){
 	util::logGLError("Post GLEW init");
 
 	glClearColor(0.f, 0.f, 0.f, 1.f);
-	glDisable(GL_DEPTH_TEST);
+	glClearDepth(1.f);
+	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
@@ -129,17 +130,25 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	//Setup the cube map rendering target
-	GLuint tex;
-	glGenTextures(1, &tex);
+	//Setup the cube map rendering target for color and depth
+	GLuint tex[2];
+	glGenTextures(2, tex);
+	for (int i = 0; i < 2; ++i){
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, tex[i]);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	for (int i = 0; i < 6; ++i){
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, 512, 512, 0,
 			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+	glActiveTexture(GL_TEXTURE1);
+	for (int i = 0;  i < 6; ++i){
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32, 512, 512, 0,
+			GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	}
 	if (util::logGLError("setup texture")){
 		return 1;
@@ -148,7 +157,8 @@ int main(int argc, char **argv){
 	GLuint fbo;
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[0], 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, tex[1], 0);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	if (!checkFrameBuffer(fbo) || util::logGLError("setup fbo")){
 		std::cerr << "FBO error!\n";
@@ -180,6 +190,13 @@ int main(int argc, char **argv){
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)(18 * sizeof(GLfloat)));
 	GLuint quadProg = util::loadProgram("res/vdbg.glsl", "res/fdbg.glsl");
+	glUseProgram(quadProg);
+	GLuint texsUnif = glGetUniformLocation(quadProg, "cube_maps");
+	GLuint mapUnif = glGetUniformLocation(quadProg, "map");
+	GLint texs[2] = { 0, 1 };
+	glUniform1iv(texsUnif, 2, texs);
+	glUniform1i(mapUnif, 0);
+
 	//For tracking which cube face to render
 	int face = 0;
 	bool changeFace = false;
@@ -217,6 +234,14 @@ int main(int argc, char **argv){
 					face = 5;
 					changeFace = true;
 					break;
+				case SDLK_d:
+					glUseProgram(quadProg);
+					glUniform1i(mapUnif, 1);
+					break;
+				case SDLK_c:
+					glUseProgram(quadProg);
+					glUniform1i(mapUnif, 0);
+					break;
 				default:
 					break;
 				}
@@ -229,13 +254,13 @@ int main(int argc, char **argv){
 
 		glViewport(0, 0, 512, 512);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		model.bind();
 		glDrawElements(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, 0);
 
 		glViewport(0, 0, 640, 480);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(quadProg);
 		glBindVertexArray(quad[VAO]);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -249,7 +274,7 @@ int main(int argc, char **argv){
 	glDeleteBuffers(1, &quad[VBO]);
 	glDeleteProgram(quadProg);
 	glDeleteFramebuffers(1, &fbo);
-	glDeleteTextures(1, &tex);
+	glDeleteTextures(2, tex);
 	SDL_GL_DeleteContext(context);
 	SDL_DestroyWindow(win);
 
