@@ -97,12 +97,20 @@ int main(int argc, char **argv){
 #endif
 	//Load and setup the program with layered view matrices and a single projection matrix
 	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
-	glm::mat4 views[2];
-	//Right side up and up-side down viewing matrices
-	views[0] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
+	glm::mat4 views[6];
+	//Viewing matrices for each face of the cube looking in
+	views[0] = glm::lookAt<GLfloat>(glm::vec3(4.f, 0.f, 0.f),
 		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-	views[1] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, -1.f, 0.f));
+	views[1] = glm::lookAt<GLfloat>(glm::vec3(-4.f, 0.f, 0.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+	views[2] = glm::lookAt<GLfloat>(glm::vec3(0.f, 4.f, 0.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f));
+	views[3] = glm::lookAt<GLfloat>(glm::vec3(0.f, -4.f, 0.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+	views[4] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, -4.f),
+		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 
 	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
 	glUseProgram(program);
@@ -111,12 +119,12 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
 	//Better way to do this properly? UBO? Unpacking the matrices would be a real pain and
 	//i think glm is supposed to interop transparently w/GL
-	glUniformMatrix4fv(viewsUnif, 1, GL_FALSE, glm::value_ptr(views[0]));
+	glUniformMatrix4fv(viewsUnif, 6, GL_FALSE, (GLfloat*)(views));
 	if (util::logGLError("Set uniforms")){
 		return 1;
 	}
 	Model model("res/suzanne.obj", program);
-	model.scale(glm::vec3(3.f, 3.f, 1.f));
+	model.scale(glm::vec3(1.5f, 1.5f, 1.5f));
 	if (util::logGLError("Setup model")){
 		return 1;
 	}
