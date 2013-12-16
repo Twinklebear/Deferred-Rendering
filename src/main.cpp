@@ -98,22 +98,26 @@ int main(int argc, char **argv){
 #endif
 	//Load and setup the program with layered view matrices and a single projection matrix
 	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
+	glm::vec3 viewDirs[6] = { glm::vec3(1.f, 0.f, 0.f), glm::vec3(-1.f, 0.f, 0.f),
+		glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, 1.f),
+		glm::vec3(0.f, 0.f, -1.f)
+	};
 	glm::mat4 views[6];
-	//Viewing matrices for each face of the cube looking in
-	views[0] = glm::lookAt<GLfloat>(glm::vec3(4.f, 0.f, 0.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-	views[1] = glm::lookAt<GLfloat>(glm::vec3(-4.f, 0.f, 0.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-	views[2] = glm::lookAt<GLfloat>(glm::vec3(0.f, 4.f, 0.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, -1.f));
-	views[3] = glm::lookAt<GLfloat>(glm::vec3(0.f, -4.f, 0.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-	views[4] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 4.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
-	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, -4.f),
-		glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+	//Viewing matrices for each face of the cube looking out
+	views[0] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		viewDirs[0], glm::vec3(0.f, 1.f, 0.f));
+	views[1] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		 viewDirs[1], glm::vec3(0.f, 1.f, 0.f));
+	views[2] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		viewDirs[2], glm::vec3(0.f, 0.f, -1.f));
+	views[3] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		viewDirs[3], glm::vec3(0.f, 0.f, 1.f));
+	views[4] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		viewDirs[4], glm::vec3(0.f, 1.f, 0.f));
+	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
+		viewDirs[5], glm::vec3(0.f, 1.f, 0.f));
 
-	GLuint program = util::loadProgram("res/vlayered_test.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
+	GLuint program = util::loadProgram("res/vlayered_instanced.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
 	glUseProgram(program);
 	GLuint projUnif = glGetUniformLocation(program, "proj");
 	GLuint viewsUnif = glGetUniformLocation(program, "view");
@@ -125,7 +129,26 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	Model model("res/suzanne.obj", program);
-	model.scale(glm::vec3(1.5f, 1.5f, 1.5f));
+	//Setup some instances of the model surrounding the origin such that an instance
+	//shows up on each face
+	const int numInstances = 6;
+	glm::mat4 modelMats[numInstances];
+	for (int i = 0; i < numInstances; ++i){
+		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]);
+	}
+	model.bind();
+	GLuint modelMatBuf;
+	glGenBuffers(1, &modelMatBuf);
+	glBindBuffer(GL_ARRAY_BUFFER, modelMatBuf);
+	glBufferData(GL_ARRAY_BUFFER, numInstances * sizeof(glm::mat4), modelMats, GL_STATIC_DRAW);
+	//Enable each column attribute of the matrix
+	for (int j = 0; j < 4; ++j){
+		glEnableVertexAttribArray(3 + j);
+		glVertexAttribPointer(3 + j, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+			(void*)(sizeof(glm::vec4) * j));
+		glVertexAttribDivisor(3 + j, 1);
+	}
+
 	if (util::logGLError("Setup model")){
 		return 1;
 	}
@@ -256,7 +279,7 @@ int main(int argc, char **argv){
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		model.bind();
-		glDrawElements(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, 0);
+		glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
 
 		glViewport(0, 0, 640, 480);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
