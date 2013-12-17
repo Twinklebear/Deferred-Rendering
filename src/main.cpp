@@ -292,37 +292,45 @@ int main(int argc, char **argv){
 				case SDLK_1:
 					face = 0;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_2:
 					face = 1;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_3:
 					face = 2;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_4:
 					face = 3;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_5:
 					face = 4;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_6:
 					face = 5;
 					changeFace = true;
+					drawScene = false;
 					break;
 				case SDLK_d:
 					glUseProgram(quadCubeProg);
 					glUniform1i(mapUnif, 1);
+					drawScene = false;
 					break;
 				case SDLK_c:
 					glUseProgram(quadCubeProg);
 					glUniform1i(mapUnif, 0);
+					drawScene = false;
 					break;
 				case SDLK_s:
-					drawScene = !drawScene;
+					drawScene = true;
 					break;
 				default:
 					break;

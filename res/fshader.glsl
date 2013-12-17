@@ -57,7 +57,7 @@ void main(void){
 		}
 	}
 	//Project our world pos into the shadow space for the face and scale it into
-	//projection space
+	//projection space. There are faster ways to do this bit
 	vec4 shadow_pos = light_proj * light_view[face] * world_pos;
 	shadow_pos /= shadow_pos.w;
 	shadow_pos = (shadow_pos + 1.f) / 2.f;
