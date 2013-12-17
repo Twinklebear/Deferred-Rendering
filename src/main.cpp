@@ -97,7 +97,7 @@ int main(int argc, char **argv){
 		0, NULL, GL_TRUE);
 #endif
 	//Load and setup the program with layered view matrices and a single projection matrix
-	glm::mat4 proj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
+	glm::mat4 shadowProj = glm::perspective<GLfloat>(90.f, 1.f, 1.f, 100.f);
 	glm::vec3 viewDirs[6] = { glm::vec3(1.f, 0.f, 0.f), glm::vec3(-1.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, 1.f),
 		glm::vec3(0.f, 0.f, -1.f)
@@ -116,19 +116,32 @@ int main(int argc, char **argv){
 		viewDirs[4], glm::vec3(0.f, 1.f, 0.f));
 	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
 		viewDirs[5], glm::vec3(0.f, 1.f, 0.f));
-
-	GLuint program = util::loadProgram("res/vlayered_instanced.glsl", "res/fshader.glsl", "res/glayered_test.glsl");
-	glUseProgram(program);
-	GLuint projUnif = glGetUniformLocation(program, "proj");
-	GLuint viewsUnif = glGetUniformLocation(program, "view");
-	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(proj));
+	//Setup the shadow program to render to the cube map
+	GLuint shadowProg = util::loadProgram("res/vlayered_instanced.glsl", "res/fshadow.glsl", "res/glayered_test.glsl");
+	glUseProgram(shadowProg);
+	GLuint projUnif = glGetUniformLocation(shadowProg, "proj");
+	GLuint viewUnif = glGetUniformLocation(shadowProg, "view");
+	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 	//Better way to do this properly? UBO? Unpacking the matrices would be a real pain and
 	//i think glm is supposed to interop transparently w/GL
-	glUniformMatrix4fv(viewsUnif, 6, GL_FALSE, (GLfloat*)(views));
-	if (util::logGLError("Set uniforms")){
+	glUniformMatrix4fv(viewUnif, 6, GL_FALSE, (GLfloat*)(views));
+	if (util::logGLError("Set up shadow program")){
 		return 1;
 	}
-	Model model("res/suzanne.obj", program);
+	
+	//The scene's view and projection matrices
+	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(5.f, 5.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
+		glm::vec3(-1.f, 1.f, -1.f));
+	glm::mat4 sceneProj = glm::perspective(75.f, static_cast<float>(WIN_WIDTH) / WIN_HEIGHT, 1.f, 100.f);
+	//Setup a forward rendering program to simply draw the models w/ a point light at the origin
+	GLuint program = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");
+	glUseProgram(program);
+	projUnif = glGetUniformLocation(program, "proj");
+	viewUnif = glGetUniformLocation(program, "view");
+	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(sceneProj));
+	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(sceneView));
+
+	Model model("res/suzanne.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
 	//shows up on each face
 	const int numInstances = 6;
@@ -223,6 +236,8 @@ int main(int argc, char **argv){
 	//For tracking which cube face to render
 	int face = 0;
 	bool changeFace = false;
+	//If we want to draw the scene or the cubemap
+	bool drawScene = false;
 
 	SDL_Event e;
 	bool quit = false;
@@ -265,6 +280,9 @@ int main(int argc, char **argv){
 					glUseProgram(quadProg);
 					glUniform1i(mapUnif, 0);
 					break;
+				case SDLK_s:
+					drawScene = !drawScene;
+					break;
 				default:
 					break;
 				}
@@ -278,15 +296,21 @@ int main(int argc, char **argv){
 		glViewport(0, 0, 512, 512);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		model.bind();
+		model.bindShadow();
 		glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
 
 		glViewport(0, 0, 640, 480);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glUseProgram(quadProg);
-		glBindVertexArray(quad[VAO]);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		if (drawScene){
+			model.bind();
+			glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
+		}
+		else {
+			glUseProgram(quadProg);
+			glBindVertexArray(quad[VAO]);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
 
 		if (util::logGLError("Post-draw")){
 				return 1;
