@@ -3,7 +3,7 @@
 //Just draw to NDC for now
 
 layout(location = 0) in vec3 pos;
-layout(location = 1) in vec3 uv;
+layout(location = 2) in vec3 uv;
 
 out vec3 f_uv;
 

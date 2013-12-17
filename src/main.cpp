@@ -16,8 +16,11 @@
 
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
+//Indices for the quad's data
 const int VAO = 0;
 const int VBO = 1;
+const int NORMALS = 2;
+const int MODEL = 3;
 
 const GLfloat triangle[] = {
 	0.f, 0.f, 0.f,
@@ -33,6 +36,14 @@ const GLfloat quadVerts[18] = {
 	-1, -1, 0,
 	1, 1, 0,
 	-1, 1, 0
+};
+const GLfloat quadNormals[18] = {
+	0, 0, 1,
+	0, 0, 1,
+	0, 0, 1,
+	0, 0, 1,
+	0, 0, 1,
+	0, 0, 1,
 };
 //Cube-map texcoords for the quad, for each face of the cubemap
 //face names are in gl order: pos_x, neg_x, pos_y, neg_y, pos_z, neg_z
@@ -209,10 +220,11 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	//Setup a debug output quad
-	GLuint quad[2];
+	//Setup a debug output quad, will also have buffers for normals and model mats so
+	//that it can also be drawn in the scene to recieve shadows
+	GLuint quad[4];
 	glGenVertexArrays(1, &quad[VAO]);
-	glGenBuffers(1, &quad[VBO]);
+	glGenBuffers(3, &quad[VBO]);
 	glBindVertexArray(quad[VAO]);
 	glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
 	//Room for the quads positions and cube map tex coords
@@ -223,21 +235,40 @@ int main(int argc, char **argv){
 	glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[0]);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)(18 * sizeof(GLfloat)));
-	GLuint quadProg = util::loadProgram("res/vdbg.glsl", "res/fdbg.glsl");
-	glUseProgram(quadProg);
-	GLuint texsUnif = glGetUniformLocation(quadProg, "cube_maps");
-	GLuint mapUnif = glGetUniformLocation(quadProg, "map");
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)(18 * sizeof(GLfloat)));
+	GLuint quadCubeProg = util::loadProgram("res/vdbg.glsl", "res/fdbg.glsl");
+	glUseProgram(quadCubeProg);
+	GLuint texsUnif = glGetUniformLocation(quadCubeProg, "cube_maps");
+	GLuint mapUnif = glGetUniformLocation(quadCubeProg, "map");
 	GLint texs[2] = { 0, 1 };
 	glUniform1iv(texsUnif, 2, texs);
 	glUniform1i(mapUnif, 0);
+	
+	//Also want to draw the quads in the scene to recieve shadows
+	glBindBuffer(GL_ARRAY_BUFFER, quad[NORMALS]);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), quadNormals, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	glm::mat4 quadModelMats[numInstances];
+	quadModelMats[0] = glm::translate<GLfloat>(0.f, -4.f, 0.f) * glm::rotate<GLfloat>(-90.f, 1.f, 0.f, 0.f) *
+		glm::scale<GLfloat>(4.f, 4.f, 1.f);
+	glBindBuffer(GL_ARRAY_BUFFER, quad[MODEL]);
+	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(glm::mat4), quadModelMats, GL_STATIC_DRAW);
+	//Enable each column attribute of the matrix
+	for (int j = 0; j < 4; ++j){
+		glEnableVertexAttribArray(3 + j);
+		glVertexAttribPointer(3 + j, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+			(void*)(sizeof(glm::vec4) * j));
+		glVertexAttribDivisor(3 + j, 1);
+	}
 
 	//For tracking which cube face to render
 	int face = 0;
 	bool changeFace = false;
 	//If we want to draw the scene or the cubemap
-	bool drawScene = false;
+	bool drawScene = true;
 
 	SDL_Event e;
 	bool quit = false;
@@ -273,11 +304,11 @@ int main(int argc, char **argv){
 					changeFace = true;
 					break;
 				case SDLK_d:
-					glUseProgram(quadProg);
+					glUseProgram(quadCubeProg);
 					glUniform1i(mapUnif, 1);
 					break;
 				case SDLK_c:
-					glUseProgram(quadProg);
+					glUseProgram(quadCubeProg);
 					glUniform1i(mapUnif, 0);
 					break;
 				case SDLK_s:
@@ -305,9 +336,12 @@ int main(int argc, char **argv){
 		if (drawScene){
 			model.bind();
 			glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
+
+			glBindVertexArray(quad[VAO]);
+			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
 		}
 		else {
-			glUseProgram(quadProg);
+			glUseProgram(quadCubeProg);
 			glBindVertexArray(quad[VAO]);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 		}
@@ -318,8 +352,9 @@ int main(int argc, char **argv){
 		SDL_GL_SwapWindow(win);
 	}
 	glDeleteVertexArrays(1, &quad[VAO]);
-	glDeleteBuffers(1, &quad[VBO]);
-	glDeleteProgram(quadProg);
+	glDeleteBuffers(3, &quad[VBO]);
+	glDeleteBuffers(1, &modelMatBuf);
+	glDeleteProgram(quadCubeProg);
 	glDeleteFramebuffers(1, &fbo);
 	glDeleteTextures(2, tex);
 	SDL_GL_DeleteContext(context);
