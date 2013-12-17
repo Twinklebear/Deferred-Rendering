@@ -42,9 +42,7 @@ void main(void){
 	n = n * 2.f - 1.f;
 	n.w = 0.f;
 	n = normalize(n);
-	vec4 v = view_pos - world_pos;
-	v.w = 0.f;
-	v = normalize(v);
+	vec4 v = normalize(view_pos - world_pos);
 	vec4 half_vect = normalize(light_dir + v);
 
 	float diff = max(0.f, dot(n, light_dir));
