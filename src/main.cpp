@@ -202,8 +202,8 @@ int main(int argc, char **argv){
 	glActiveTexture(GL_TEXTURE1);
 	//How can i make use of these for the cube map? there's no textureProj for it. Or was textureProj
 	//unrelated to the texture type? I'm not sure
-	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	for (int i = 0;  i < 6; ++i){
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F, 512, 512, 0,
 			GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -357,11 +357,11 @@ int main(int argc, char **argv){
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
 		}
 		else {
-			//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 			glUseProgram(quadCubeProg);
 			glBindVertexArray(quad[VAO]);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
-			//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		}
 
 		if (util::logGLError("Post-draw")){

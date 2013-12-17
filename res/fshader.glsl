@@ -43,12 +43,11 @@ void main(void){
 	vec4 l = normalize(light_pos - world_pos);
 	vec4 h = normalize(l + v);
 
-	float shadow_depth = linearize(texture(shadow_map, -l));
 	//Is there a better way to figure out which face we're projected onto?
 	//For now we just run through each view dir for the faces and see which one's normal
 	//that l is closest too.
 	//Maybe this should just be done in the vertex shader? What about tris overlapping multiple faces?
-	float max_dot = 0.f;
+	float max_dot = -1.f;
 	int face;
 	for (int i = 0; i < 6; ++i){
 		float a = dot(-l, cube_normals[i]);
@@ -62,11 +61,7 @@ void main(void){
 	vec4 shadow_pos = light_proj * light_view[face] * world_pos;
 	shadow_pos /= shadow_pos.w;
 	shadow_pos = (shadow_pos + 1.f) / 2.f;
-	float f = 1.f;
-	if (shadow_depth < shadow_pos.z){
-		f = 0.f;
-	}
-	f = 1.f;
+	float f = linearize(texture(shadow_map, vec4(-l.xyz, shadow_pos.z)));
 
 	float diff = max(0.f, dot(f_normal, l));
 	float spec = max(0.f, dot(f_normal, h));
