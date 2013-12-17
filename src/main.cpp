@@ -149,8 +149,15 @@ int main(int argc, char **argv){
 	glUseProgram(program);
 	projUnif = glGetUniformLocation(program, "proj");
 	viewUnif = glGetUniformLocation(program, "view");
+	GLuint lightViewUnif = glGetUniformLocation(program, "light_view");
+	GLuint lightProjUnif = glGetUniformLocation(program, "light_proj");
+	GLuint shadowMapUnif = glGetUniformLocation(program, "shadow_map");
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(sceneProj));
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(sceneView));
+	//Shadow map is texture unit 1
+	glUniform1i(shadowMapUnif, 1);
+	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
+	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 
 	Model model("res/suzanne.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
@@ -184,8 +191,8 @@ int main(int argc, char **argv){
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, tex[i]);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < 6; ++i){
@@ -193,8 +200,12 @@ int main(int argc, char **argv){
 			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 	glActiveTexture(GL_TEXTURE1);
+	//How can i make use of these for the cube map? there's no textureProj for it. Or was textureProj
+	//unrelated to the texture type? I'm not sure
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	for (int i = 0;  i < 6; ++i){
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32, 512, 512, 0,
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F, 512, 512, 0,
 			GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	}
 	if (util::logGLError("setup texture")){
@@ -253,7 +264,7 @@ int main(int argc, char **argv){
 
 	glm::mat4 quadModelMats[numInstances];
 	quadModelMats[0] = glm::translate<GLfloat>(0.f, -4.f, 0.f) * glm::rotate<GLfloat>(-90.f, 1.f, 0.f, 0.f) *
-		glm::scale<GLfloat>(4.f, 4.f, 1.f);
+		glm::scale<GLfloat>(6.f, 6.f, 1.f);
 	glBindBuffer(GL_ARRAY_BUFFER, quad[MODEL]);
 	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(glm::mat4), quadModelMats, GL_STATIC_DRAW);
 	//Enable each column attribute of the matrix
@@ -269,7 +280,6 @@ int main(int argc, char **argv){
 	bool changeFace = false;
 	//If we want to draw the scene or the cubemap
 	bool drawScene = true;
-
 	SDL_Event e;
 	bool quit = false;
 	while (!quit){
@@ -327,8 +337,14 @@ int main(int argc, char **argv){
 		glViewport(0, 0, 512, 512);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(2.f, 4.f);
 		model.bindShadow();
 		glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
+
+		glBindVertexArray(quad[VAO]);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
+		glDisable(GL_POLYGON_OFFSET_FILL);
 
 		glViewport(0, 0, 640, 480);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -341,9 +357,11 @@ int main(int argc, char **argv){
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
 		}
 		else {
+			//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 			glUseProgram(quadCubeProg);
 			glBindVertexArray(quad[VAO]);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
+			//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		}
 
 		if (util::logGLError("Post-draw")){

@@ -13,14 +13,13 @@ layout(triangle_strip, max_vertices = 18) out;
 uniform mat4 view[6];
 uniform mat4 proj;
 
-flat in int vcolor_idx[3];
 flat out int fcolor_idx;
 
 void main(void){
 	for (int l = 0; l < 6; ++l){
 		for (int i = 0; i < gl_in.length(); ++i){
 			gl_Layer = l;
-			fcolor_idx = vcolor_idx[i];
+			fcolor_idx = l;
 			gl_Position = proj * view[l] * gl_in[i].gl_Position;
 			EmitVertex();
 		}
