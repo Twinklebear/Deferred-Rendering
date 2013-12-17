@@ -12,8 +12,7 @@ out vec4 f_normal;
 out vec2 f_uv;
 
 void main(void){
-	mat4 mv = view * model;
-	gl_Position = proj * mv * vec4(position, 1.f);
-	f_normal = normalize(mv * vec4(normal, 0.f));
+	gl_Position = proj * view * model * vec4(position, 1.f);
+	f_normal = normalize(model * vec4(normal, 0.f));
 	f_uv = uv;
 }
