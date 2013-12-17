@@ -36,12 +36,8 @@ vec4 compute_view_pos(void){
 void main(void){
 	vec4 world_pos = inv_view * compute_view_pos();
 	vec4 n = texture(normal, f_uv);
-	vec4 l = light_pos - world_pos;
-	l.w = 0.f;
-	l = normalize(l);
-	vec4 v = view_pos - world_pos;
-	v.w = 0.f;
-	v = normalize(v);
+	vec4 l = normalize(light_pos - world_pos);
+	vec4 v = normalize(view_pos - world_pos);
 	vec4 half_vect = normalize(l + v);
 	n = n * 2.f - 1.f;
 	n.w = 0.f;
