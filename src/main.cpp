@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include <GL/glew.h>
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
@@ -140,16 +141,19 @@ int main(int argc, char **argv){
 	if (util::logGLError("Set up shadow program")){
 		return 1;
 	}
-	
+
+	//Move camera at 10 degrees / second
+	float camSpeed = 10 * 3.14 / 180;
+	glm::vec4 camPos = glm::vec4(5 * std::cos(0), 4.f, 5 * std::sin(0), 1.f);
 	//The scene's view and projection matrices
-	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(2.f, 2.f, -2.f), glm::vec3(0.f, 0.f, 0.f),
-		glm::vec3(0.f, 1.f, 0.f));
+	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(camPos), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
 	glm::mat4 sceneProj = glm::perspective(75.f, static_cast<float>(WIN_WIDTH) / WIN_HEIGHT, 1.f, 100.f);
 	//Setup a forward rendering program to simply draw the models w/ a point light at the origin
 	GLuint program = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");
 	glUseProgram(program);
 	projUnif = glGetUniformLocation(program, "proj");
 	viewUnif = glGetUniformLocation(program, "view");
+	GLuint viewPosUnif = glGetUniformLocation(program, "view_pos");
 	GLuint lightViewUnif = glGetUniformLocation(program, "light_view");
 	GLuint lightProjUnif = glGetUniformLocation(program, "light_proj");
 	GLuint shadowMapUnif = glGetUniformLocation(program, "shadow_map");
@@ -159,6 +163,7 @@ int main(int argc, char **argv){
 	glUniform1i(shadowMapUnif, 1);
 	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
 	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
+	glUniform4fv(viewPosUnif, 1, glm::value_ptr(camPos));
 
 	Model model("res/suzanne.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
@@ -166,7 +171,7 @@ int main(int argc, char **argv){
 	const int numInstances = 6;
 	glm::mat4 modelMats[numInstances];
 	for (int i = 0; i < numInstances; ++i){
-		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]);
+		modelMats[i] = glm::translate<GLfloat>(2.5f * viewDirs[i]);
 	}
 	model.bind();
 	GLuint modelMatBuf;
@@ -262,10 +267,20 @@ int main(int argc, char **argv){
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 
 	glm::mat4 quadModelMats[numInstances];
-	quadModelMats[0] = glm::translate<GLfloat>(0.f, -4.f, 0.f) * glm::rotate<GLfloat>(-90.f, 1.f, 0.f, 0.f) *
-		glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[0] = glm::translate<GLfloat>(5.f, 0.f, 0.f) * glm::rotate<GLfloat>(-90.f, 0.f, 1.f, 0.f)
+		* glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[1] = glm::translate<GLfloat>(-5.f, 0.f, 0.f) * glm::rotate<GLfloat>(90.f, 0.f, 1.f, 0.f)
+		* glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[2] = glm::translate<GLfloat>(0.f, 5.f, 0.f) * glm::rotate<GLfloat>(90.f, 1.f, 0.f, 0.f)
+		* glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[3] = glm::translate<GLfloat>(0.f, -5.f, 0.f) * glm::rotate<GLfloat>(-90.f, 1.f, 0.f, 0.f)
+		* glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[4] = glm::translate<GLfloat>(0.f, 0.f, 5.f) * glm::rotate<GLfloat>(180.f, 1.f, 0.f, 0.f)
+		* glm::scale<GLfloat>(6.f, 6.f, 1.f);
+	quadModelMats[5] = glm::translate<GLfloat>(0.f, 0.f, -5.f) * glm::scale<GLfloat>(6.f, 6.f, 1.f);
+
 	glBindBuffer(GL_ARRAY_BUFFER, quad[MODEL]);
-	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(glm::mat4), quadModelMats, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, numInstances * sizeof(glm::mat4), quadModelMats, GL_STATIC_DRAW);
 	//Enable each column attribute of the matrix
 	for (int j = 0; j < 4; ++j){
 		glEnableVertexAttribArray(3 + j);
@@ -274,6 +289,7 @@ int main(int argc, char **argv){
 		glVertexAttribDivisor(3 + j, 1);
 	}
 
+	SDL_GetTicks();
 	//For tracking which cube face to render
 	int face = 0;
 	bool changeFace = false;
@@ -283,6 +299,9 @@ int main(int argc, char **argv){
 	bool quit = false;
 	while (!quit){
 		while (SDL_PollEvent(&e)){
+			if (e.type == SDL_QUIT){
+				quit = true;
+			}
 			if (e.type == SDL_KEYDOWN){
 				switch (e.key.keysym.sym){
 				case SDLK_ESCAPE:
@@ -340,6 +359,13 @@ int main(int argc, char **argv){
 			glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
 			glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[face]);
 		}
+		//Pan the camera about
+		float t = SDL_GetTicks() / 1000.f;
+		glm::vec4 camPos = glm::vec4(5 * std::cos(t * camSpeed), 4.f, 5 * std::sin(t * camSpeed), 1.f);
+		glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(camPos), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f));
+		glUseProgram(program);
+		glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(sceneView));
+		glUniform4fv(viewPosUnif, 1, glm::value_ptr(camPos));
 
 		glViewport(0, 0, CUBE_MAP_DIM, CUBE_MAP_DIM);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -350,7 +376,7 @@ int main(int argc, char **argv){
 		glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
 
 		glBindVertexArray(quad[VAO]);
-		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, numInstances);
 		glDisable(GL_POLYGON_OFFSET_FILL);
 
 		glViewport(0, 0, WIN_WIDTH, WIN_HEIGHT);
@@ -361,7 +387,7 @@ int main(int argc, char **argv){
 			glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
 
 			glBindVertexArray(quad[VAO]);
-			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
+			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, numInstances);
 		}
 		else {
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);

@@ -18,13 +18,13 @@ const vec4 cube_normals[6] = vec4[](
 	vec4(0.f, 0.f, 1.f, 0.f),
 	vec4(0.f, 0.f, -1.f, 0.f)
 );
-//Hardcoded view position and light location for now
-const vec4 view_pos = vec4(5.f, 5.f, 5.f, 1.f);
+//Hardcoded light location for now
 const vec4 light_pos = vec4(0.f, 0.f, 0.f, 1.f);
 
 uniform samplerCubeShadow shadow_map;
 uniform mat4 light_view[6];
 uniform mat4 light_proj;
+uniform vec4 view_pos;
 
 flat in int fcolor_idx;
 in vec4 world_pos;
