@@ -22,7 +22,7 @@ const vec4 cube_normals[6] = vec4[](
 const vec4 view_pos = vec4(5.f, 5.f, 5.f, 1.f);
 const vec4 light_pos = vec4(0.f, 0.f, 0.f, 1.f);
 
-uniform samplerCube shadow_map;
+uniform samplerCubeShadow shadow_map;
 uniform mat4 light_view[6];
 uniform mat4 light_proj;
 
@@ -47,8 +47,6 @@ void main(void){
 	//For now we just run through each view dir for the faces and see which one's normal
 	//that l is closest too.
 	//Maybe this should just be done in the vertex shader? What about tris overlapping multiple faces?
-	//For debugging, simply try and draw out the color values we read from the cube map
-	/*
 	float max_dot = -1.f;
 	int face;
 	for (int i = 0; i < 6; ++i){
@@ -78,7 +76,5 @@ void main(void){
 	vec3 reflected = f * vec3(spec * 0.4f);
 	color = colors[face];
 	color.xyz = min(color.xyz * scattered + reflected, vec3(1.f));
-	*/
-	color = texture(shadow_map, -l.xyz);
 }
 
