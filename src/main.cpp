@@ -143,7 +143,7 @@ int main(int argc, char **argv){
 	
 	//The scene's view and projection matrices
 	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(5.f, 5.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
-		glm::vec3(-1.f, 1.f, -1.f));
+		glm::vec3(0.f, 1.f, 0.f));
 	glm::mat4 sceneProj = glm::perspective(75.f, static_cast<float>(WIN_WIDTH) / WIN_HEIGHT, 1.f, 100.f);
 	//Setup a forward rendering program to simply draw the models w/ a point light at the origin
 	GLuint program = util::loadProgram("res/vinstanced.glsl", "res/fshader.glsl");

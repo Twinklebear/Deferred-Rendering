@@ -59,8 +59,10 @@ void main(void){
 	//Project our world pos into the shadow space for the face and scale it into
 	//projection space. There are faster ways to do this bit
 	vec4 shadow_pos = light_proj * light_view[face] * world_pos;
-	shadow_pos /= shadow_pos.w;
+	//Scaling before perspective division solves the issue! But why?
+	//And not entirely for the rotated cubes.
 	shadow_pos = (shadow_pos + 1.f) / 2.f;
+	shadow_pos /= shadow_pos.w;
 	float f = linearize(texture(shadow_map, vec4(-l.xyz, shadow_pos.z)));
 
 	float diff = max(0.f, dot(f_normal, l));
