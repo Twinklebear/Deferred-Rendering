@@ -117,17 +117,17 @@ int main(int argc, char **argv){
 	glm::mat4 views[6];
 	//Viewing matrices for each face of the cube looking out
 	views[0] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		viewDirs[0], glm::vec3(0.f, 1.f, 0.f));
+		viewDirs[0], glm::vec3(0.f, -1.f, 0.f));
 	views[1] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		 viewDirs[1], glm::vec3(0.f, 1.f, 0.f));
+		 viewDirs[1], glm::vec3(0.f, -1.f, 0.f));
 	views[2] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
 		viewDirs[2], glm::vec3(0.f, 0.f, 1.f));
 	views[3] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
 		viewDirs[3], glm::vec3(0.f, 0.f, -1.f));
 	views[4] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		viewDirs[4], glm::vec3(0.f, 1.f, 0.f));
+		viewDirs[4], glm::vec3(0.f, -1.f, 0.f));
 	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		viewDirs[5], glm::vec3(0.f, 1.f, 0.f));
+		viewDirs[5], glm::vec3(0.f, -1.f, 0.f));
 	//Setup the shadow program to render to the cube map
 	GLuint shadowProg = util::loadProgram("res/vlayered_instanced.glsl", "res/fshadow.glsl", "res/glayered_test.glsl");
 	glUseProgram(shadowProg);
@@ -142,7 +142,7 @@ int main(int argc, char **argv){
 	}
 	
 	//The scene's view and projection matrices
-	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(5.f, 5.f, 5.f), glm::vec3(0.f, 0.f, 0.f),
+	glm::mat4 sceneView = glm::lookAt<GLfloat>(glm::vec3(2.f, 2.f, -2.f), glm::vec3(0.f, 0.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f));
 	glm::mat4 sceneProj = glm::perspective(75.f, static_cast<float>(WIN_WIDTH) / WIN_HEIGHT, 1.f, 100.f);
 	//Setup a forward rendering program to simply draw the models w/ a point light at the origin
@@ -160,13 +160,13 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
 	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 
-	Model model("res/polyhedron.obj", program, shadowProg);
+	Model model("res/suzanne.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
 	//shows up on each face
 	const int numInstances = 6;
 	glm::mat4 modelMats[numInstances];
 	for (int i = 0; i < numInstances; ++i){
-		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]);// * glm::rotate<GLfloat>(45.f, 0.f, 1.f, 1.f);
+		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]);
 	}
 	model.bind();
 	GLuint modelMatBuf;
@@ -201,8 +201,6 @@ int main(int argc, char **argv){
 			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 	glActiveTexture(GL_TEXTURE1);
-	//How can i make use of these for the cube map? there's no textureProj for it. Or was textureProj
-	//unrelated to the texture type? I'm not sure
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	for (int i = 0;  i < 6; ++i){

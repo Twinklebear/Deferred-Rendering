@@ -32,12 +32,6 @@ in vec4 f_normal;
 
 out vec4 color;
 
-//Linearize depth values
-float linearize(float z){
-	return (2.f * z - gl_DepthRange.near - gl_DepthRange.far)
-		/ (gl_DepthRange.far - gl_DepthRange.near);
-}
-
 void main(void){
 	vec4 v = normalize(view_pos - world_pos);
 	vec4 l = normalize(light_pos - world_pos);
@@ -61,7 +55,6 @@ void main(void){
 	vec4 shadow_pos = light_proj * light_view[face] * world_pos;
 	shadow_pos /= shadow_pos.w;
 	shadow_pos.z = (shadow_pos.z + 1.f) / 2.f;
-	//Some scaling should be applied before/after the persp. division?
 	float f = texture(shadow_map, vec4(-l.xyz, shadow_pos.z));
 
 	float diff = max(0.f, dot(f_normal, l));
@@ -77,6 +70,5 @@ void main(void){
 	vec3 reflected = f * vec3(spec * 0.4f);
 	color = colors[face];
 	color.xyz = min(color.xyz * scattered + reflected, vec3(1.f));
-	color.xyz = vec3(shadow_pos.z);
 }
 
