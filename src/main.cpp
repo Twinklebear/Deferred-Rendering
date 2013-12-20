@@ -16,6 +16,7 @@
 
 const int WIN_WIDTH = 640;
 const int WIN_HEIGHT = 480;
+const int CUBE_MAP_DIM = 512;
 //Indices for the quad's data
 const int VAO = 0;
 const int VBO = 1;
@@ -196,7 +197,7 @@ int main(int argc, char **argv){
 	}
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < 6; ++i){
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, 512, 512, 0,
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, CUBE_MAP_DIM, CUBE_MAP_DIM, 0,
 			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
 	glActiveTexture(GL_TEXTURE1);
@@ -205,7 +206,7 @@ int main(int argc, char **argv){
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	for (int i = 0;  i < 6; ++i){
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F, 512, 512, 0,
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32F, CUBE_MAP_DIM, CUBE_MAP_DIM, 0,
 			GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	}
 	if (util::logGLError("setup texture")){
@@ -342,7 +343,7 @@ int main(int argc, char **argv){
 			glBufferSubData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), 18 * sizeof(GLfloat), cubeMapUV[face]);
 		}
 
-		glViewport(0, 0, 512, 512);
+		glViewport(0, 0, CUBE_MAP_DIM, CUBE_MAP_DIM);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_POLYGON_OFFSET_FILL);
@@ -354,7 +355,7 @@ int main(int argc, char **argv){
 		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
 		glDisable(GL_POLYGON_OFFSET_FILL);
 
-		glViewport(0, 0, 640, 480);
+		glViewport(0, 0, WIN_WIDTH, WIN_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		if (drawScene){
