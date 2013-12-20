@@ -160,7 +160,7 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
 	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 
-	Model model("res/suzanne.obj", program, shadowProg);
+	Model model("res/polyhedron.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
 	//shows up on each face
 	const int numInstances = 6;
