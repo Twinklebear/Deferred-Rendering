@@ -14,8 +14,8 @@
 #include "model.h"
 #include "util.h"
 
-const int WIN_WIDTH = 640;
-const int WIN_HEIGHT = 480;
+const int WIN_WIDTH = 1280;
+const int WIN_HEIGHT = 720;
 const int CUBE_MAP_DIM = 512;
 //Indices for the quad's data
 const int VAO = 0;
@@ -160,13 +160,13 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
 	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 
-	Model model("res/suzanne.obj", program, shadowProg);
+	Model model("res/cube.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
 	//shows up on each face
 	const int numInstances = 6;
 	glm::mat4 modelMats[numInstances];
 	for (int i = 0; i < numInstances; ++i){
-		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]);
+		modelMats[i] = glm::translate<GLfloat>(3.f * viewDirs[i]) * glm::rotate<GLfloat>(45.f, 0.f, 1.f, 1.f);
 	}
 	model.bind();
 	GLuint modelMatBuf;

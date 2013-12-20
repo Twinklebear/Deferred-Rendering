@@ -71,7 +71,7 @@ void main(void){
 	else {
 		spec = pow(spec, 50.f);
 	}
-	vec3 scattered = vec3(0.1f, 0.1f, 0.1f) + f * diff;
+	vec3 scattered = vec3(0.1f) + f * diff;
 	//White specular highlight color
 	vec3 reflected = f * vec3(spec * 0.4f);
 	color = colors[face];
