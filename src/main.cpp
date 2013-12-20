@@ -120,9 +120,9 @@ int main(int argc, char **argv){
 	views[1] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
 		 viewDirs[1], glm::vec3(0.f, 1.f, 0.f));
 	views[2] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		viewDirs[2], glm::vec3(0.f, 0.f, -1.f));
+		viewDirs[2], glm::vec3(0.f, 0.f, 1.f));
 	views[3] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
-		viewDirs[3], glm::vec3(0.f, 0.f, 1.f));
+		viewDirs[3], glm::vec3(0.f, 0.f, -1.f));
 	views[4] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
 		viewDirs[4], glm::vec3(0.f, 1.f, 0.f));
 	views[5] = glm::lookAt<GLfloat>(glm::vec3(0.f, 0.f, 0.f),
