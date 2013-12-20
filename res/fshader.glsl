@@ -37,6 +37,23 @@ float linearize(float d){
 	return (2.f * d - gl_DepthRange.near - gl_DepthRange.far)
 		/ (gl_DepthRange.far - gl_DepthRange.near);
 }
+//Scale the depth values into range for floating point depth textures w/ perspective projection
+//Not correct?
+float scale_depth(float z){
+	float near = gl_DepthRange.near;
+	float far = gl_DepthRange.far;
+	return (far + near) / (far - near) + (1.f / z) * (-2.f * far * near ) / (far - near);
+}
+//Scaling for fixed point depth buffers? Also not correct?
+int scale_depth_fixed(float z){
+	float near = gl_DepthRange.near;
+	float far = gl_DepthRange.far;
+	//32 bit fixed-pt
+	float s = pow(2.f, 32.f) - 1.f;
+	z = (z + 1.f) / 2.f;
+	z = (far + near) / (2.f * (far - near)) + 1.f / z * (-far * near) / (far - near) + 0.5f;
+	return int(z * s);
+}
 
 void main(void){
 	vec4 v = normalize(view_pos - world_pos);
@@ -59,11 +76,9 @@ void main(void){
 	//Project our world pos into the shadow space for the face and scale it into
 	//projection space. There are faster ways to do this bit
 	vec4 shadow_pos = light_proj * light_view[face] * world_pos;
-	//Scaling before perspective division solves the issue! But why?
-	//And not entirely for the rotated cubes.
-	shadow_pos = (shadow_pos + 1.f) / 2.f;
+	//Some scaling should be applied before/after the persp. division?
 	shadow_pos /= shadow_pos.w;
-	float f = linearize(texture(shadow_map, vec4(-l.xyz, shadow_pos.z)));
+	float f = texture(shadow_map, vec4(-l.xyz, shadow_pos.z));
 
 	float diff = max(0.f, dot(f_normal, l));
 	float spec = max(0.f, dot(f_normal, h));
