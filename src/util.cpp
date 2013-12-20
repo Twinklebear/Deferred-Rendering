@@ -157,8 +157,13 @@ bool util::logGLError(const std::string &msg){
 	}
 	return false;
 }
+#if _MSC_VER
+void APIENTRY util::glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
+	GLsizei len, const GLchar *msg, GLvoid *user)
+#else 
 void util::glDebugCallback(GLenum src, GLenum type, GLuint id, GLenum severity,
 	GLsizei len, const GLchar *msg, GLvoid *user)
+#endif
 {
 	//Print a time stamp for the message
 	float sec = SDL_GetTicks() / 1000.f;

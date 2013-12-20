@@ -155,11 +155,12 @@ int main(int argc, char **argv){
 	glUniformMatrix4fv(projUnif, 1, GL_FALSE, glm::value_ptr(sceneProj));
 	glUniformMatrix4fv(viewUnif, 1, GL_FALSE, glm::value_ptr(sceneView));
 	//Shadow map is texture unit 1
-	glUniform1i(shadowMapUnif, 1);
+	//For debugging let's try and just select the color based on what was rendered out earlier.
+	glUniform1i(shadowMapUnif, 0);
 	glUniformMatrix4fv(lightViewUnif, 6, GL_FALSE, (GLfloat*)(views));
 	glUniformMatrix4fv(lightProjUnif, 1, GL_FALSE, glm::value_ptr(shadowProj));
 
-	Model model("res/suzanne.obj", program, shadowProg);
+	Model model("res/polyhedron.obj", program, shadowProg);
 	//Setup some instances of the model surrounding the origin such that an instance
 	//shows up on each face
 	const int numInstances = 6;
@@ -358,11 +359,14 @@ int main(int argc, char **argv){
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		if (drawScene){
+			//For debugging let use treat the shadow map as a normal cube map texture for drawing
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 			model.bind();
 			glDrawElementsInstanced(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, NULL, numInstances);
 
 			glBindVertexArray(quad[VAO]);
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 1);
+			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 		}
 		else {
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_NONE);
