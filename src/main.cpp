@@ -243,7 +243,7 @@ int main(int argc, char **argv){
 	glBindVertexArray(quad[VAO]);
 	glBindBuffer(GL_ARRAY_BUFFER, quad[VBO]);
 	//Room for the quads positions and cube map tex coords
-	glBufferData(GL_ARRAY_BUFFER, 36 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 36 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
 	//Write the position data
 	glBufferSubData(GL_ARRAY_BUFFER, 0, 18 * sizeof(GLfloat), quadVerts);
 	//Initially we'll draw +X face
