@@ -3,6 +3,6 @@ Deferred-Rendering
 
 Playing around with making a deferred renderer
 
-This point light branch performs shadow mapping of a point light. To do this
-I'll use layered rendering into a cubemap via the geometry shader stage
+The dual_paraboliod branch implements omnidirectional (and hemispherical) point light shadow mapping
+using the method outlined in [Shadow Mapping for Hemispherical and Omnidirectional Light Sources](http://www.thomasannen.com/pub/cgi2002.pdf)
 
