@@ -97,6 +97,8 @@ int main(int argc, char **argv){
 	glClearDepth(1.f);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
