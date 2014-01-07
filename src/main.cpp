@@ -57,8 +57,6 @@ int main(int argc, char **argv){
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClearDepth(1.f);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
 
 	std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n"
 		<< "OpenGL Vendor: " << glGetString(GL_VENDOR) << "\n"
@@ -71,18 +69,12 @@ int main(int argc, char **argv){
 	glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE,
 		0, NULL, GL_TRUE);
 #endif
-	//No VBO since it's just a simple quad the program generates the verts based on vertex id
-	//but we do still need a vao bound
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
 	GLuint parabolicProg = util::loadProgram("res/vparabola.glsl", "res/fparabola.glsl");
-	glUseProgram(parabolicProg);
-	glm::mat4 modelMat = glm::translate<GLfloat>(0, 4, -4) * glm::rotate<GLfloat>(-45, 1, 1, 0)
-		* glm::scale<GLfloat>(4, 4, 1);
-	GLuint modelUnif = glGetUniformLocation(parabolicProg, "model");
-	glUniformMatrix4fv(modelUnif, 1, GL_FALSE, glm::value_ptr(modelMat));
-	if (util::logGLError("Loaded triangle model & parabolicProg")){
+	Model model("res/suzanne.obj", parabolicProg);
+	model.rotate(glm::rotate<GLfloat>(180, 0, 1, 0));
+	model.translate(glm::vec3(0, 0, 4));
+	model.scale(glm::vec3(6, 6, 2));
+	if (util::logGLError("Loaded model")){
 		return 1;
 	}
 
@@ -90,20 +82,45 @@ int main(int argc, char **argv){
 	bool quit = false;
 	while (!quit){
 		while (SDL_PollEvent(&e)){
-			if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)){
+			if (e.type == SDL_QUIT){
 				quit = true;
+			}
+			if (e.type == SDL_KEYDOWN){
+				switch (e.key.keysym.sym){
+					case SDLK_ESCAPE:
+						quit = true;
+						break;
+					case SDLK_d:
+						model.translate(glm::vec3(0.5, 0, 0));
+						break;
+					case SDLK_a:
+						model.translate(glm::vec3(-0.5, 0, 0));
+						break;
+					case SDLK_w:
+						model.translate(glm::vec3(0, 0.5, 0));
+						break;
+					case SDLK_s:
+						model.translate(glm::vec3(0, -0.5, 0));
+						break;
+					case SDLK_q:
+						model.translate(glm::vec3(0, 0, 0.5));
+						break;
+					case SDLK_e:
+						model.translate(glm::vec3(0, 0, -0.5));
+						break;
+					default:
+						break;
+				}
 			}
 		}
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glUseProgram(parabolicProg);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		glDrawElements(GL_TRIANGLES, model.elems(), GL_UNSIGNED_SHORT, 0);
 
 		SDL_GL_SwapWindow(win);
 
 		util::logGLError("Post-draw");
 	}
 
-	glDeleteVertexArrays(1, &vao);
 	SDL_GL_DeleteContext(context);
 	SDL_DestroyWindow(win);
 	return 0;
